@@ -1,0 +1,9 @@
+SELECT user_id, employee_name, department_name
+FROM `master_daily_attendance`
+group by user_id
+having department_name like 'Wise Yak Solutions Pvt. Ltd.'
+
+===datewise attendance of all employees----
+SELECT *
+FROM `wiseyak_everyday_v2`
+ORDER BY `employee_name`, `attendance_date`

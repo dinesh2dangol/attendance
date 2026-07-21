@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # The Laravel Application Service (PHP-FPM & CLI)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: attendance-laravel-app
+    container_name: attendance-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - attendance-network
+      - sql_default
+
+  # The Web Server Service (Nginx)
+  nginx:
+    image: nginx:alpine
+    container_name: attendance-nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/var/www
+      - ./docker/nginx:/etc/nginx/conf.d
+    networks:
+      - attendance-network
+    depends_on:
+      - app
+
+networks:
+  attendance-network:
+    driver: bridge
+
+  sql_default:
+    external: true
+    name: sql_default
