@@ -112,7 +112,11 @@
                                     <td>{{ $employee->part_time ? 'Yes' : 'No' }}</td>
                                     <td>{{ $employee->department?->department_name ?? $employee->department_id }}</td>
                                     <td>{{ $employee->gender }}</td>
-                                    <td><a href="{{ route('employee.attendance', $employee) }}">Attendance</a></td>
+                                    <td>
+                                        <a href="{{ route('employee.attendance', $employee) }}">Attendance</a>
+                                        |
+                                        <a href="{{ route('employees.edit', $employee) }}">Edit</a>
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>

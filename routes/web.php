@@ -95,6 +95,30 @@ Route::get('dashboard', function (Request $request) {
     return view('dashboard', compact('employees', 'departments'));
 })->middleware('auth')->name('dashboard');
 
+Route::get('employees/{employee}/edit', function (App\Models\Employee $employee) {
+    $departments = Department::orderBy('department_name')->get();
+
+    return view('employee.edit', compact('employee', 'departments'));
+})->middleware('auth')->name('employees.edit');
+
+Route::put('employees/{employee}', function (App\Models\Employee $employee, Request $request) {
+    $validated = $request->validate([
+        'employee_name' => ['required', 'string', 'max:50'],
+        'join_date_eng' => ['nullable', 'date'],
+        'join_date_npt' => ['nullable', 'string', 'max:20'],
+        'status' => ['nullable', 'integer'],
+        'salary' => ['nullable', 'numeric'],
+        'working_hours' => ['nullable', 'numeric'],
+        'part_time' => ['nullable', 'boolean'],
+        'department_id' => ['nullable', 'integer', 'exists:departments,department_id'],
+        'gender' => ['nullable', 'string', 'max:8'],
+    ]);
+
+    $employee->update($validated);
+
+    return redirect()->route('dashboard')->with('success', 'Employee updated successfully.');
+})->middleware('auth')->name('employees.update');
+
 Route::get('employees/{employee}/attendance', function (App\Models\Employee $employee, Request $request) {
     $month = intval($request->query('month', Carbon::now()->month));
     $year = intval($request->query('year', Carbon::now()->year));
