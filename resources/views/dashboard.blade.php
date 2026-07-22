@@ -74,7 +74,6 @@
                     <select id="status" name="status">
                         <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Active</option>
                         <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Inactive</option>
-                        <option value="2" {{ request('status') === '2' ? 'selected' : '' }}>Disabled</option>
                     </select>
                 </div>
                 <div class="actions">
