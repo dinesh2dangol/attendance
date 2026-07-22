@@ -88,14 +88,10 @@
                                 <th>User ID</th>
                                 <th>Name</th>
                                 <th>Join Date (ENG)</th>
-                                <th>Join Date (NPT)</th>
                                 <th>Status</th>
-                                <th>Salary</th>
-                                <th>Hours</th>
-                                <th>Part Time</th>
                                 <th>Dept</th>
                                 <th>Gender</th>
-                                <th>Attendance</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -105,11 +101,7 @@
                                     <td>{{ $employee->user_id }}</td>
                                     <td>{{ $employee->employee_name }}</td>
                                     <td>{{ optional($employee->join_date_eng)->format('Y-m-d H:i') }}</td>
-                                    <td>{{ $employee->join_date_npt }}</td>
                                     <td>{{ $employee->status }}</td>
-                                    <td>{{ $employee->salary }}</td>
-                                    <td>{{ $employee->working_hours }}</td>
-                                    <td>{{ $employee->part_time ? 'Yes' : 'No' }}</td>
                                     <td>{{ $employee->department?->department_name ?? $employee->department_id }}</td>
                                     <td>{{ $employee->gender }}</td>
                                     <td>
