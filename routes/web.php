@@ -36,7 +36,7 @@ Route::middleware('guest')->group(function () {
         return redirect()->intended('/dashboard');
     });
 
-    Route::view('register', 'auth.register')->name('register');
+    // Route::view('register', 'auth.register')->name('register');
 
     Route::post('register', function (Request $request) {
         $data = $request->validate([

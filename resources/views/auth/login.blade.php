@@ -50,7 +50,6 @@
             <button type="submit">Log in</button>
         </form>
 
-        <p class="small">Don't have an account? <a class="link" href="{{ route('register') }}">Register</a></p>
     </div>
 </body>
 </html>
