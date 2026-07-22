@@ -67,22 +67,28 @@ Route::post('logout', function (Request $request) {
 
 Route::get('dashboard', function (Request $request) {
     $departments = Department::orderBy('department_name')->get();
-
-    // Pick the 2nd department if available (index 1), fallback to null
+    
+    // Pick the 4th department if available (index 3), fallback to null
     $defaultDepartmentId = $departments->skip(3)->first()?->department_id;
 
-    // Check if user has submitted any filter or pagination query params
-    $hasQueryParams = count($request->query()) > 0;
+    // 1. Initial Load: If no query params exist in the URL, redirect with default parameters
+    if (count($request->query()) === 0) {
+        return redirect()->route('dashboard', array_filter([
+            'department' => $defaultDepartmentId,
+            'status'     => '1', // 1 = Active
+        ]));
+    }
 
-    // Set defaults on initial load (when no query parameters exist)
-    $gender = $request->query('gender');
-    $department = $hasQueryParams ? $request->query('department') : $defaultDepartmentId;
-    $status = $hasQueryParams ? $request->query('status') : '1'; // '1' is Active
+    // 2. Read parameters directly from the request URL
+    $search     = $request->query('search');
+    $gender     = $request->query('gender');
+    $department = $request->query('department');
+    $status     = $request->query('status');
 
-    // Build Query
+    // 3. Build Query
     $query = Employee::orderBy('employee_name');
 
-    if ($search = $request->query('search')) {
+    if ($search) {
         $query->where('employee_name', 'like', "%{$search}%");
     }
 
@@ -98,10 +104,10 @@ Route::get('dashboard', function (Request $request) {
         $query->where('status', $status);
     }
 
+    // 4. Paginate and append query string (preserves search, gender, department, and status on page 2, 3, etc.)
     $employees = $query->with('department')->paginate(10)->withQueryString();
 
-    // Pass resolved filter values to view so dropdowns reflect defaults
-    return view('dashboard', compact('employees', 'departments', 'department', 'status', 'gender'));
+    return view('dashboard', compact('employees', 'departments', 'department', 'status', 'gender', 'search'));
 })->middleware('auth')->name('dashboard');
 
 Route::get('employees/{employee}/edit', function (App\Models\Employee $employee) {
