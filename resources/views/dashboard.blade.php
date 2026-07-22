@@ -61,10 +61,14 @@
                     <select id="department" name="department">
                         <option value="">All</option>
                         @foreach ($departments as $dept)
-                            <option value="{{ $dept->department_id }}" {{ request('department') == $dept->department_id ? 'selected' : '' }}>{{ $dept->department_name }}</option>
+                            <option value="{{ $dept->department_id }}" 
+                                {{ (string)$department === (string)$dept->department_id ? 'selected' : '' }}>
+                                {{ $dept->department_name }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
+                
                 <div class="field-group">
                     <label for="status">Status</label>
                     <select id="status" name="status">
@@ -100,7 +104,7 @@
                                     <td>{{ $employee->id }}</td>
                                     <td>{{ $employee->user_id }}</td>
                                     <td>{{ $employee->employee_name }}</td>
-                                    <td>{{ optional($employee->join_date_eng)->format('Y-m-d H:i') }}</td>
+                                    <td>{{ optional($employee->join_date_eng)->format('Y-m-d') }}</td>
                                     <td>{{ $employee->status }}</td>
                                     <td>{{ $employee->department?->department_name ?? $employee->department_id }}</td>
                                     <td>{{ $employee->gender }}</td>
