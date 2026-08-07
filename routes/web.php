@@ -142,7 +142,7 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
 
     DB::statement("SET collation_connection = 'utf8mb4_0900_ai_ci'");
 
-    $attendances = DB::table('wiseyak_everyday_v2')
+    $attendances = DB::table('daily_attendance_step3')
         ->where('user_id', $employee->user_id)
         ->whereBetween('attendance_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
         ->orderBy('attendance_date')

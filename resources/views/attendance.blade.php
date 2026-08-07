@@ -123,6 +123,19 @@
                             @forelse ($dayRecords as $record)
                                 @if(data_get($record, 'day_type') === 'Weekend')
                                     <span class="attendance-chip weekend">Weekend</span>
+                                @elseif(data_get($record, 'day_type') === 'Holiday')
+                                    <span class="attendance-chip weekend">Holiday</span>
+                                    <div>{{ data_get($record, 'holiday_name') ?? '-' }}</div>
+                                @elseif(data_get($record, 'attendance_status') === 'Absent')
+                                    <span class="attendance-chip absent">Absent</span>
+                                @elseif(data_get($record, 'attendance_status') === 'Leave')
+                                <span class="attendance-chip absent">
+                                    LEAVE
+                                </span>
+                                <div class="attendance-details">
+                                    <div>{{ data_get($record, 'leave_type') ?? '-' }}</div>
+                                    <div>{{ data_get($record, 'approval_status') == 1 ? 'Approved' : 'Pending' }}</div>
+                                </div>
                                 @else
                                 <span class="attendance-chip {{ Str::slug(data_get($record, 'attendance_status', 'present')) }}">
                                     {{ ucfirst(data_get($record, 'attendance_status', 'Present')) }}
@@ -131,16 +144,29 @@
                                     <div><span>In:</span> {{ data_get($record, 'first_punch') ?? '-' }}</div>
                                     <div><span>Out:</span> {{ data_get($record, 'last_punch') ?? '-' }}</div>
                                     <hr color="lightgray" />
-                                    <div><span>Lunch Out:</span> {{ data_get($record, 'lunch_out') ?? '-' }}</div>
-                                    <div><span>Lunch In:</span> {{ data_get($record, 'lunch_in') ?? '-' }}</div>
+                                    <!-- <div><span>Lunch Out:</span> {{ data_get($record, 'lunch_out') ?? '-' }}</div>
+                                    <div><span>Lunch In:</span> {{ data_get($record, 'lunch_in') ?? '-' }}</div> -->
+                                    @php
+                                        $p1 = data_get($record, 'punch_1');
+                                        $p2 = data_get($record, 'punch_2');
+                                        $p3 = data_get($record, 'punch_3');
+                                        $p4 = data_get($record, 'punch_4');
+                                        $p5 = data_get($record, 'punch_5');
+                                        
+                                        
+                                        $diff = ($p2 && $p3) 
+                                            ? \Carbon\Carbon::parse($p2)->diff(\Carbon\Carbon::parse($p3))->format('%H:%I:%S') 
+                                            : '-';
+                                    @endphp
+                                    <div><span>Lunch Out:</span> {{ $p2 ?? '-' }}</div>
+                                    <div><span>Lunck In:</span> {{ $p3 ?? '-' }}</div>
+                                    <div><span>Lunch Hour:</span> {{ $diff }}</div>
                                     <span class="attendance-chip {{ Str::slug(data_get($record, 'attendance_status', 'present')) }}">
                                         {{ data_get($record, 'lunch_hour') ?? '-' }}
                                     </span>
-                                    <div><span>Lunch Hour:</span> {{ data_get($record, 'lunch_hour') ?? '-' }}</div>
+                                    <!-- <div><span>Lunch Hour:</span> {{ data_get($record, 'lunch_hour') ?? '-' }}</div> -->
                                 </div>
                                 @endif
-
-                                
                             @empty
                                 <span class="attendance-chip no-entry">No entry</span>
                             @endforelse
