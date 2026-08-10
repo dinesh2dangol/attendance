@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Carbon;
+use App\Http\Controllers\LeaveController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -150,3 +151,13 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
 
     return view('attendance', compact('employee', 'attendances', 'monthStart', 'monthEnd'));
 })->middleware('auth')->name('employee.attendance');
+
+Route::middleware('auth')->group(function () {
+    Route::get('leaves', [LeaveController::class, 'index'])->name('leaves.index');
+    Route::get('leaves/create', [LeaveController::class, 'create'])->name('leaves.create');
+    Route::post('leaves', [LeaveController::class, 'store'])->name('leaves.store');
+    Route::get('leaves/{leave}/edit', [LeaveController::class, 'edit'])->name('leaves.edit');
+    Route::put('leaves/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
+    Route::get('leaves/approval', [LeaveController::class, 'approval'])->name('leaves.approval');
+    Route::post('leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve');
+});

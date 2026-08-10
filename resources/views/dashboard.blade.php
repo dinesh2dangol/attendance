@@ -111,6 +111,9 @@
                                         <a href="{{ route('employee.attendance', $employee) }}">Attendance</a>
                                         |
                                         <a href="{{ route('employees.edit', $employee) }}">Edit</a>
+                                        |
+                                           <a href="{{ route('leaves.index', ['user_id' => $employee->user_id]) }}">Leaves</a>
+                                           |
                                     </td>
                                 </tr>
                             @endforeach

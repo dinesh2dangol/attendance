@@ -8,3 +8,6 @@ select `m`.`user_id` AS `user_id`,`m`.`employee_name` AS `employee_name`,`m`.`de
 
 wiseyak_everyday_v3
 select `m`.`user_id` AS `user_id`,`m`.`employee_name` AS `employee_name`,`m`.`department_name` AS `department_name`,`m`.`attendance_year` AS `attendance_year`,`m`.`attendance_month` AS `attendance_month`,`m`.`attendance_date` AS `attendance_date`,`m`.`day_of_week` AS `day_of_week`,`m`.`day_type` AS `day_type`,`m`.`attendance_status` AS `attendance_status`,`m`.`holiday_name` AS `holiday_name`,`m`.`remarks` AS `remarks`,`m`.`first_punch` AS `first_punch`,`m`.`lunch_out` AS `lunch_out`,`m`.`lunch_in` AS `lunch_in`,`m`.`lunch_hour` AS `lunch_hour`,`m`.`last_punch` AS `last_punch`,`m`.`hours_worked` AS `hours_worked`,`m`.`punch_1` AS `punch_1`,`m`.`punch_2` AS `punch_2`,`m`.`punch_3` AS `punch_3`,`m`.`punch_4` AS `punch_4`,`m`.`punch_5` AS `punch_5`,`m`.`punch_6` AS `punch_6`,`m`.`punch_7` AS `punch_7`,`m`.`punch_8` AS `punch_8`,`m`.`punch_9` AS `punch_9`,`m`.`punch_10` AS `punch_10` from (`master_everyday_v2` `m` join `EmployeeActiveStatus` `eas` on((`m`.`user_id` = (`eas`.`user_id` collate utf8mb4_unicode_ci)))) where ((`m`.`department_name` = 'Wise Yak Solutions Pvt. Ltd.') and (`eas`.`is_active` = 1)) order by `m`.`attendance_date` desc,`m`.`employee_name`
+
+docker compose up -d --build app
+docker compose exec app php artisan migrate
