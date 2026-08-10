@@ -102,9 +102,9 @@
                 Gender
                 <select name="gender">
                     <option value="">Select gender</option>
-                    <option value="male" {{ strtolower(old('gender', $employee->gender)) === 'male' ? 'selected' : '' }}>Male</option>
-                    <option value="female" {{ strtolower(old('gender', $employee->gender)) === 'female' ? 'selected' : '' }}>Female</option>
-                    <option value="other" {{ strtolower(old('gender', $employee->gender)) === 'other' ? 'selected' : '' }}>Other</option>
+                    <option value="Male" {{ strtolower(old('gender', $employee->gender)) === 'male' ? 'selected' : '' }}>Male</option>
+                    <option value="Female" {{ strtolower(old('gender', $employee->gender)) === 'female' ? 'selected' : '' }}>Female</option>
+                    <option value="Other" {{ strtolower(old('gender', $employee->gender)) === 'other' ? 'selected' : '' }}>Other</option>
                 </select>
             </label>
 
