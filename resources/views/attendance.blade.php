@@ -159,7 +159,7 @@
                                             : '-';
                                     @endphp
                                     <div><span>Lunch Out:</span> {{ $p2 ?? '-' }}</div>
-                                    <div><span>Lunck In:</span> {{ $p3 ?? '-' }}</div>
+                                    <div><span>Lunch In:</span> {{ $p3 ?? '-' }}</div>
                                     <div><span>Lunch Hour:</span> {{ $diff }}</div>
                                     <span class="attendance-chip {{ Str::slug(data_get($record, 'attendance_status', 'present')) }}">
                                         {{ data_get($record, 'lunch_hour') ?? '-' }}

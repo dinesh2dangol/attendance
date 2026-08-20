@@ -1,25 +1,19 @@
-FROM php:8.3-fpm
+FROM php:8.3-fpm-alpine
 
-# Install system dependencies and PHP extensions required by Laravel
-RUN apt-get update && apt-get install -y \
+# Add official PHP extension installer helper
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
+
+# Install essential CLI tools and PHP extensions
+RUN apk add --no-cache \
     git \
     curl \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
     zip \
-    unzip
-
-# Clear cache
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Install PHP extensions for MySQL and string manipulation
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+    unzip \
+    && install-php-extensions pdo_mysql mbstring exif pcntl bcmath gd
 
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
 WORKDIR /var/www
 
 EXPOSE 9000

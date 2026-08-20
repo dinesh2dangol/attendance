@@ -11,3 +11,12 @@ select `m`.`user_id` AS `user_id`,`m`.`employee_name` AS `employee_name`,`m`.`de
 
 docker compose up -d --build app
 docker compose exec app php artisan migrate
+
+
+docker inspect mysql_server --format '
+Container Name: {{.Name}}
+Image: {{.Config.Image}}
+Networks: {{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}
+Mounts: {{range .Mounts}}{{.Source}} -> {{.Destination}}
+{{end}}'
+
