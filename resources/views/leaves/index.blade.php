@@ -9,6 +9,8 @@
         .container { max-width: 900px; margin: 4rem auto; padding: 2rem; background: white; border-radius: 0.75rem; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); }
         .toolbar { display: flex; justify-content: space-between; gap: 1rem; align-items: center; margin-bottom: 1.5rem; }
         .button { display: inline-flex; padding: 0.6rem 0.9rem; background: #111827; color: white; text-decoration: none; border-radius: 0.5rem; border: none; cursor: pointer; }
+        .button-secondary { background: #e2e8f0; color: #0f172a; }
+        .button-secondary:hover { background: #cbd5e1; }
         .table-wrap { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
         th, td { padding: 0.75rem 0.85rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
@@ -26,7 +28,8 @@
                     <p>Manage employee leaves.</p>
                 @endif
             </div>
-            <div>
+            <div style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center;">
+                <a href="{{ route('dashboard') }}" class="button button-secondary">Back to Dashboard</a>
                 <a href="{{ route('leaves.approval', ['user_id' => request('user_id')]) }}" class="button button-secondary">Approval</a>
                 <a href="{{ route('leaves.create', ['user_id' => request('user_id')]) }}" class="button">Add Leave</a>
             </div>
