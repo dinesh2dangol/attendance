@@ -128,6 +128,7 @@
                                     <div>{{ data_get($record, 'holiday_name') ?? '-' }}</div>
                                 @elseif(data_get($record, 'attendance_status') === 'Absent')
                                     <span class="attendance-chip absent">Absent</span>
+                                    <a class="button button-secondary" href="{{ route('leaves.create', ['user_id' => $employee->user_id, 'leave_date' => $day->format('Y-m-d')]) }}" style="font-size: 0.75rem; padding: 0.5rem 0.7rem; margin-top: 0.15rem;">Add Leave</a>
                                 @elseif(data_get($record, 'attendance_status') === 'Leave')
                                 <span class="attendance-chip absent">
                                     LEAVE

@@ -42,7 +42,7 @@
 
             <div class="field">
                 <label for="leave_date">Date</label>
-                <input id="leave_date" name="leave_date" type="date" required />
+                <input id="leave_date" name="leave_date" type="date" value="{{ old('leave_date', request('leave_date')) }}" required />
             </div>
 
             <div class="field">
