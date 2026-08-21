@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Carbon;
 use App\Http\Controllers\LeaveController;
+use App\Http\Controllers\ManualAttendanceController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -108,7 +109,26 @@ Route::get('dashboard', function (Request $request) {
     // 4. Paginate and append query string (preserves search, gender, department, and status on page 2, 3, etc.)
     $employees = $query->with('department')->paginate(10)->withQueryString();
 
-    return view('dashboard', compact('employees', 'departments', 'department', 'status', 'gender', 'search'));
+    $currentYear = Carbon::now()->year;
+
+    $absentDatesByUser = DB::table('daily_attendance_step3')
+        ->where('attendance_status', 'Absent')
+        ->whereYear('attendance_date', $currentYear)
+        ->select('user_id', 'attendance_date')
+        ->orderBy('attendance_date')
+        ->get()
+        ->groupBy('user_id')
+        ->map(fn ($rows) => $rows->pluck('attendance_date')->map(fn ($date) => Carbon::parse($date)->format('Y-m-d'))->values()->all());
+
+    $leaveDatesByUser = DB::table('leaves')
+        ->whereYear('leave_date', $currentYear)
+        ->select('user_id', 'leave_date')
+        ->orderBy('leave_date')
+        ->get()
+        ->groupBy('user_id')
+        ->map(fn ($rows) => $rows->pluck('leave_date')->map(fn ($date) => Carbon::parse($date)->format('Y-m-d'))->values()->all());
+
+    return view('dashboard', compact('employees', 'departments', 'department', 'status', 'gender', 'search', 'absentDatesByUser', 'leaveDatesByUser'));
 })->middleware('auth')->name('dashboard');
 
 Route::get('employees/{employee}/edit', function (App\Models\Employee $employee) {
@@ -160,4 +180,7 @@ Route::middleware('auth')->group(function () {
     Route::put('leaves/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
     Route::get('leaves/approval', [LeaveController::class, 'approval'])->name('leaves.approval');
     Route::post('leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve');
+
+    Route::get('manual-attendance/create', [ManualAttendanceController::class, 'create'])->name('manual-attendance.create');
+    Route::post('manual-attendance', [ManualAttendanceController::class, 'store'])->name('manual-attendance.store');
 });

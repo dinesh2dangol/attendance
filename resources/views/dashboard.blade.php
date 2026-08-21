@@ -94,11 +94,17 @@
                                 <th>Status</th>
                                 <th>Dept</th>
                                 <th>Gender</th>
+                                <th>Absent Dates</th>
+                                <th>Leave Dates</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach ($employees as $employee)
+                                @php
+                                    $absentDates = $absentDatesByUser[$employee->user_id] ?? [];
+                                    $leaveDates = $leaveDatesByUser[$employee->user_id] ?? [];
+                                @endphp
                                 <tr>
                                     <td>{{ $employee->id }}</td>
                                     <td>{{ $employee->user_id }}</td>
@@ -107,13 +113,15 @@
                                     <td>{{ $employee->status }}</td>
                                     <td>{{ $employee->department?->department_name ?? $employee->department_id }}</td>
                                     <td>{{ $employee->gender }}</td>
+                                    <td>{{ empty($absentDates) ? '-' : implode(', ', $absentDates) }}</td>
+                                    <td>{{ empty($leaveDates) ? '-' : implode(', ', $leaveDates) }}</td>
                                     <td>
                                         <a href="{{ route('employee.attendance', $employee) }}">Attendance</a>
                                         |
                                         <a href="{{ route('employees.edit', $employee) }}">Edit</a>
                                         |
-                                           <a href="{{ route('leaves.index', ['user_id' => $employee->user_id]) }}">Leaves</a>
-                                           |
+                                        <a href="{{ route('leaves.index', ['user_id' => $employee->user_id]) }}">Leaves</a>
+                                        |
                                     </td>
                                 </tr>
                             @endforeach

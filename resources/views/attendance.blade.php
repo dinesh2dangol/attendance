@@ -128,12 +128,17 @@
                                     <div>{{ data_get($record, 'holiday_name') ?? '-' }}</div>
                                 @elseif(data_get($record, 'attendance_status') === 'Absent')
                                     <span class="attendance-chip absent">Absent</span>
+                                    <div class="attendance-details">
+                                        <div><span>Date:</span> {{ $day->format('Y-m-d') }}</div>
+                                    </div>
                                     <a class="button button-secondary" href="{{ route('leaves.create', ['user_id' => $employee->user_id, 'leave_date' => $day->format('Y-m-d')]) }}" style="font-size: 0.75rem; padding: 0.5rem 0.7rem; margin-top: 0.15rem;">Add Leave</a>
+                                    <a class="button button-secondary" href="{{ route('manual-attendance.create', ['user_id' => $employee->user_id, 'timestamp' => $day->format('Y-m-d') . 'T09:00']) }}" style="font-size: 0.75rem; padding: 0.5rem 0.7rem; margin-top: 0.15rem;">Add Manual Attendance</a>
                                 @elseif(data_get($record, 'attendance_status') === 'Leave')
                                 <span class="attendance-chip absent">
                                     LEAVE
                                 </span>
                                 <div class="attendance-details">
+                                    <div><span>Date:</span> {{ $day->format('Y-m-d') }}</div>
                                     <div>{{ data_get($record, 'leave_type') ?? '-' }}</div>
                                     <div>{{ data_get($record, 'approval_status') == 1 ? 'Approved' : 'Pending' }}</div>
                                 </div>
