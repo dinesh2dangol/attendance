@@ -94,8 +94,6 @@
                                 <th>Status</th>
                                 <th>Dept</th>
                                 <th>Gender</th>
-                                <th>Absent Dates</th>
-                                <th>Leave Dates</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -113,8 +111,6 @@
                                     <td>{{ $employee->status }}</td>
                                     <td>{{ $employee->department?->department_name ?? $employee->department_id }}</td>
                                     <td>{{ $employee->gender }}</td>
-                                    <td>{{ empty($absentDates) ? '-' : implode(', ', $absentDates) }}</td>
-                                    <td>{{ empty($leaveDates) ? '-' : implode(', ', $leaveDates) }}</td>
                                     <td>
                                         <a href="{{ route('employee.attendance', $employee) }}">Attendance</a>
                                         |
@@ -124,6 +120,23 @@
                                         |
                                     </td>
                                 </tr>
+                                <tr>
+                                    <td colspan="8">
+                                        <strong>Absent Dates:</strong>
+                                        @if (!empty($absentDates))
+                                            {{ implode(', ', $absentDates) }}
+                                        @else
+                                            None
+                                        @endif
+                                        <br>
+                                        <strong>Leave Dates:</strong>
+                                        @if (!empty($leaveDates))
+                                            {{ implode(', ', $leaveDates) }}
+                                        @else
+                                            None
+                                        @endif
+                                    </td>
+
                             @endforeach
                         </tbody>
                     </table>
