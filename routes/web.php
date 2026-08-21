@@ -111,6 +111,10 @@ Route::get('dashboard', function (Request $request) {
 
     $currentYear = Carbon::now()->year;
 
+    $joinDatesByUser = $employees->getCollection()
+        ->mapWithKeys(fn ($employee) => [$employee->user_id => $employee->join_date_eng ? Carbon::parse($employee->join_date_eng)->startOfDay() : null])
+        ->all();
+
     $absentDatesByUser = DB::table('daily_attendance_step3')
         ->where('attendance_status', 'Absent')
         ->whereYear('attendance_date', $currentYear)
@@ -118,7 +122,17 @@ Route::get('dashboard', function (Request $request) {
         ->orderBy('attendance_date')
         ->get()
         ->groupBy('user_id')
-        ->map(fn ($rows) => $rows->pluck('attendance_date')->map(fn ($date) => Carbon::parse($date)->format('Y-m-d'))->values()->all());
+        ->map(function ($rows, $userId) use ($joinDatesByUser) {
+            $joinDate = $joinDatesByUser[$userId] ?? null;
+
+            return $rows
+                ->pluck('attendance_date')
+                ->filter(fn ($date) => ! $joinDate || Carbon::parse($date)->greaterThanOrEqualTo($joinDate))
+                ->map(fn ($date) => Carbon::parse($date)->format('Y-m-d'))
+                ->values()
+                ->all();
+        })
+        ->all();
 
     $leaveDatesByUser = DB::table('leaves')
         ->whereYear('leave_date', $currentYear)
@@ -126,7 +140,17 @@ Route::get('dashboard', function (Request $request) {
         ->orderBy('leave_date')
         ->get()
         ->groupBy('user_id')
-        ->map(fn ($rows) => $rows->pluck('leave_date')->map(fn ($date) => Carbon::parse($date)->format('Y-m-d'))->values()->all());
+        ->map(function ($rows, $userId) use ($joinDatesByUser) {
+            $joinDate = $joinDatesByUser[$userId] ?? null;
+
+            return $rows
+                ->pluck('leave_date')
+                ->filter(fn ($date) => ! $joinDate || Carbon::parse($date)->greaterThanOrEqualTo($joinDate))
+                ->map(fn ($date) => Carbon::parse($date)->format('Y-m-d'))
+                ->values()
+                ->all();
+        })
+        ->all();
 
     return view('dashboard', compact('employees', 'departments', 'department', 'status', 'gender', 'search', 'absentDatesByUser', 'leaveDatesByUser'));
 })->middleware('auth')->name('dashboard');
