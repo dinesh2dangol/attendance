@@ -124,19 +124,29 @@
                                     <td colspan="8">
                                         <strong>Absent Dates:</strong>
                                         @if (!empty($absentDates))
-                                            {{ implode(', ', $absentDates) }}
+                                            @foreach ($absentDates as $date)
+                                                @php
+                                                    $absentDate = \Carbon\Carbon::parse($date);
+                                                @endphp
+                                                <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>@if (! $loop->last), @endif
+                                            @endforeach
                                         @else
                                             None
                                         @endif
                                         <br>
                                         <strong>Leave Dates:</strong>
                                         @if (!empty($leaveDates))
-                                            {{ implode(', ', $leaveDates) }}
+                                            @foreach ($leaveDates as $date)
+                                                @php
+                                                    $leaveDate = \Carbon\Carbon::parse($date);
+                                                @endphp
+                                                <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $date }}</a>@if (! $loop->last), @endif
+                                            @endforeach
                                         @else
                                             None
                                         @endif
                                     </td>
-
+                                </tr>
                             @endforeach
                         </tbody>
                     </table>
