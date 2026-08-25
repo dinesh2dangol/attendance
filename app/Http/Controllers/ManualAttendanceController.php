@@ -21,21 +21,70 @@ class ManualAttendanceController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'user_id' => ['required', 'string', 'exists:employees,user_id'],
-            'timestamp' => ['required', 'date'],
-            'status' => ['required', 'integer', 'in:0,1'],
-            'punch_type' => ['required', 'string', 'max:50'],
-            'remarks' => ['nullable', 'string'],
-        ]);
+        $status = (int) $request->input('status');
 
-        DB::table('ManualAttendance')->insert([
-            'user_id' => $validated['user_id'],
-            'timestamp' => $validated['timestamp'],
-            'status' => $validated['status'],
-            'punch_type' => $validated['punch_type'],
-            'remarks' => $validated['remarks'] ?? null,
-        ]);
+        $rules = [
+            'user_id' => ['required', 'string', 'exists:employees,user_id'],
+            'attendance_date' => ['required', 'date'],
+            'status' => ['required', 'integer', 'in:0,1'],
+            'remarks' => ['nullable', 'string'],
+        ];
+
+        if ($status === 1) {
+            $rules['punch_IN'] = ['required', 'date_format:H:i'];
+            $rules['punch_OUT'] = ['required', 'date_format:H:i'];
+        }
+
+        $validated = $request->validate($rules);
+
+        if ($status === 1) {
+            $punchTypes = ['IN', 'OUT', 'LUNCH_IN', 'LUNCH_OUT'];
+            $rows = [];
+
+            foreach ($punchTypes as $punchType) {
+                $value = $request->input('punch_' . $punchType);
+
+                if (empty($value)) {
+                    continue;
+                }
+
+                $rows[] = [
+                    'user_id' => $validated['user_id'],
+                    'timestamp' => $validated['attendance_date'] . ' ' . $value . ':00',
+                    'status' => 1,
+                    'punch_type' => $punchType,
+                    'remarks' => $validated['remarks'] ?? null,
+                ];
+            }
+
+            if (empty($rows)) {
+                return back()->withErrors(['status' => 'Please provide at least one punch timestamp for a present day.'])->withInput();
+            }
+
+            DB::table('ManualAttendance')->insert($rows);
+        } else {
+            $leaveDate = $validated['attendance_date'];
+
+            DB::table('ManualAttendance')->insert([
+                'user_id' => $validated['user_id'],
+                'timestamp' => $leaveDate . ' 00:00:00',
+                'status' => 0,
+                'punch_type' => 'ABSENT',
+                'remarks' => $validated['remarks'] ?? null,
+            ]);
+
+            DB::table('leaves')->updateOrInsert(
+                [
+                    'user_id' => $validated['user_id'],
+                    'leave_date' => $leaveDate,
+                ],
+                [
+                    'leave_type' => 'others',
+                    'leave_description' => 'Manual attendance marked absent',
+                    'approval_status' => 0,
+                ]
+            );
+        }
 
         return redirect()->route('dashboard')->with('success', 'Manual attendance added successfully.');
     }

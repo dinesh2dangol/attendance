@@ -10,6 +10,7 @@
         .field { display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem }
         input, select, textarea { padding:0.6rem; border:1px solid #d1d5db; border-radius:0.5rem; }
         .button { padding:0.6rem 0.9rem; background:#111827; color:white; border-radius:0.5rem; border:none; cursor:pointer }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -42,8 +43,8 @@
             </div>
 
             <div class="field">
-                <label for="timestamp">Timestamp</label>
-                <input id="timestamp" name="timestamp" type="datetime-local" value="{{ old('timestamp', $selectedTimestamp ?? '') }}" required />
+                <label for="attendance_date">Date</label>
+                <input id="attendance_date" name="attendance_date" type="date" value="{{ old('attendance_date', \Carbon\Carbon::parse($selectedTimestamp ?? now())->format('Y-m-d')) }}" required />
             </div>
 
             <div class="field">
@@ -55,15 +56,21 @@
                 </select>
             </div>
 
-            <div class="field">
-                <label for="punch_type">Punch Type</label>
-                <select id="punch_type" name="punch_type" required>
-                    <option value="">-- Select punch type --</option>
-                    <option value="IN" {{ old('punch_type') === 'IN' ? 'selected' : '' }}>IN</option>
-                    <option value="OUT" {{ old('punch_type') === 'OUT' ? 'selected' : '' }}>OUT</option>
-                    <option value="LUNCH_IN" {{ old('punch_type') === 'LUNCH_IN' ? 'selected' : '' }}>LUNCH_IN</option>
-                    <option value="LUNCH_OUT" {{ old('punch_type') === 'LUNCH_OUT' ? 'selected' : '' }}>LUNCH_OUT</option>
-                </select>
+            <div id="present-fields" class="hidden">
+                @php
+                    $defaultPunchTimes = [
+                        'IN' => '09:00',
+                        'OUT' => '17:00',
+                        'LUNCH_IN' => '',
+                        'LUNCH_OUT' => '',
+                    ];
+                @endphp
+                @foreach (['IN' => 'In', 'OUT' => 'Out', 'LUNCH_IN' => 'Lunch In', 'LUNCH_OUT' => 'Lunch Out'] as $punchType => $label)
+                    <div class="field">
+                        <label for="punch_{{ $punchType }}">{{ $label }} Time</label>
+                        <input id="punch_{{ $punchType }}" name="punch_{{ $punchType }}" type="time" value="{{ old('punch_' . $punchType, $defaultPunchTimes[$punchType] ?? '') }}" />
+                    </div>
+                @endforeach
             </div>
 
             <div class="field">
@@ -77,5 +84,18 @@
             </div>
         </form>
     </div>
+
+    <script>
+        const statusSelect = document.getElementById('status');
+        const presentFields = document.getElementById('present-fields');
+
+        function togglePunchFields() {
+            const isPresent = statusSelect.value === '1';
+            presentFields.classList.toggle('hidden', !isPresent);
+        }
+
+        statusSelect.addEventListener('change', togglePunchFields);
+        togglePunchFields();
+    </script>
 </body>
 </html>
