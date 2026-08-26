@@ -1,0 +1,103 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Department;
+use App\Models\Employee;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+
+class DashboardController extends Controller
+{
+    public function index(Request $request)
+    {
+        $departments = Department::orderBy('department_name')->get();
+        $defaultDepartmentId = $departments->skip(3)->first()?->department_id;
+
+        if (count($request->query()) === 0) {
+            return redirect()->route('dashboard', array_filter([
+                'department' => $defaultDepartmentId,
+                'status' => '1',
+            ]));
+        }
+
+        $search = $request->query('search');
+        $gender = $request->query('gender');
+        $department = $request->query('department');
+        $status = $request->query('status');
+
+        $query = Employee::orderBy('employee_name');
+
+        if ($search) {
+            $query->where('employee_name', 'like', "%{$search}%");
+        }
+
+        if ($gender) {
+            $query->where('gender', $gender);
+        }
+
+        if ($department !== null && $department !== '') {
+            $query->where('department_id', $department);
+        }
+
+        if ($status !== null && $status !== '') {
+            $query->where('status', $status);
+        }
+
+        $employees = $query->with('department')->paginate(10)->withQueryString();
+        $currentYear = Carbon::now()->year;
+
+        $joinDatesByUser = $employees->getCollection()
+            ->mapWithKeys(fn ($employee) => [$employee->user_id => $employee->join_date_eng ? Carbon::parse($employee->join_date_eng)->startOfDay() : null])
+            ->all();
+
+        $absentDatesByUser = DB::table('daily_attendance_step3')
+            ->where('attendance_status', 'Absent')
+            ->whereYear('attendance_date', $currentYear)
+            ->select('user_id', 'attendance_date')
+            ->orderBy('attendance_date')
+            ->get()
+            ->groupBy('user_id')
+            ->map(function ($rows, $userId) use ($joinDatesByUser) {
+                $joinDate = $joinDatesByUser[$userId] ?? null;
+
+                return $rows
+                    ->pluck('attendance_date')
+                    ->filter(fn ($date) => ! $joinDate || Carbon::parse($date)->greaterThanOrEqualTo($joinDate))
+                    ->map(fn ($date) => Carbon::parse($date)->format('Y-m-d'))
+                    ->values()
+                    ->all();
+            })
+            ->all();
+
+        $leaveDatesByUser = DB::table('leaves')
+            ->whereYear('leave_date', $currentYear)
+            ->select('user_id', 'leave_date')
+            ->orderBy('leave_date')
+            ->get()
+            ->groupBy('user_id')
+            ->map(function ($rows, $userId) use ($joinDatesByUser) {
+                $joinDate = $joinDatesByUser[$userId] ?? null;
+
+                return $rows
+                    ->pluck('leave_date')
+                    ->filter(fn ($date) => ! $joinDate || Carbon::parse($date)->greaterThanOrEqualTo($joinDate))
+                    ->map(fn ($date) => Carbon::parse($date)->format('Y-m-d'))
+                    ->values()
+                    ->all();
+            })
+            ->all();
+
+        return view('dashboard', compact(
+            'employees',
+            'departments',
+            'department',
+            'status',
+            'gender',
+            'search',
+            'absentDatesByUser',
+            'leaveDatesByUser'
+        ));
+    }
+}

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Employee;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 
 class ManualAttendanceController extends Controller
 {
@@ -86,6 +87,13 @@ class ManualAttendanceController extends Controller
             );
         }
 
-        return redirect()->route('dashboard')->with('success', 'Manual attendance added successfully.');
+        $employee = Employee::where('user_id', $validated['user_id'])->firstOrFail();
+        $attendanceDate = Carbon::parse($validated['attendance_date']);
+
+        return redirect()->route('employee.attendance', [
+            'employee' => $employee,
+            'month' => $attendanceDate->month,
+            'year' => $attendanceDate->year,
+        ])->with('success', 'Manual attendance added successfully.');
     }
 }
