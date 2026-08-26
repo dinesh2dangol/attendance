@@ -99,7 +99,6 @@
                         @else
                             <a class="button button-secondary" href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $monthStart->month - 1, 'year' => $monthStart->year]) }}">Previous Month</a>
                         @endif
-                        <button class="button" type="submit">Go</button>
                     </form>
                 </div>
 
