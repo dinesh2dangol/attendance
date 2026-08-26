@@ -20,3 +20,7 @@ Networks: {{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}
 Mounts: {{range .Mounts}}{{.Source}} -> {{.Destination}}
 {{end}}'
 
+FOR RBAC BASED MIGRATION
+docker compose run --rm app php artisan migrate
+
+
