@@ -95,6 +95,7 @@
                     <thead>
                         <tr>
                             <th>ID</th>
+                            <th>Employee</th>
                             <th>Date</th>
                             <th>Type</th>
                             <th>Description</th>
@@ -105,6 +106,7 @@
                         @foreach($pendingLeaves as $leave)
                             <tr>
                                 <td>{{ $leave->leave_id }}</td>
+                                <td>{{ $leave->employee?->employee_name ?? $leave->user_id }}</td>
                                 <td>{{ optional($leave->leave_date)->format('Y-m-d') }}</td>
                                 <td>{{ $leave->leave_type }}</td>
                                 <td>{{ Str::limit($leave->leave_description, 100) }}</td>
@@ -130,18 +132,28 @@
                     <thead>
                         <tr>
                             <th>ID</th>
+                            <th>Employee</th>
                             <th>Date</th>
                             <th>Type</th>
                             <th>Description</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($approvedLeaves as $leave)
                             <tr>
                                 <td>{{ $leave->leave_id }}</td>
+                                <td>{{ $leave->employee?->employee_name ?? $leave->user_id }}</td>
                                 <td>{{ optional($leave->leave_date)->format('Y-m-d') }}</td>
                                 <td>{{ $leave->leave_type }}</td>
                                 <td>{{ Str::limit($leave->leave_description, 100) }}</td>
+                                <td>
+                                    @if($leave->employee && $leave->leave_date)
+                                        <a href="{{ route('employee.attendance', ['employee' => $leave->employee, 'month' => $leave->leave_date->month, 'year' => $leave->leave_date->year]) }}">Attendance</a>
+                                    @else
+                                        —
+                                    @endif
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>

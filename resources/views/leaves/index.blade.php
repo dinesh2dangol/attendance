@@ -63,6 +63,10 @@
                                 <td>{{ Str::limit($leave->leave_description, 80) }}</td>
                                 <td>{{ $leave->approval_status }}</td>
                                 <td>
+                                    @if($leave->employee && $leave->leave_date)
+                                        <a href="{{ route('employee.attendance', ['employee' => $leave->employee, 'month' => $leave->leave_date->month, 'year' => $leave->leave_date->year]) }}">Attendance</a>
+                                        @if($leave->approval_status === 0) | @endif
+                                    @endif
                                     @if($leave->approval_status === 0)
                                         <a href="{{ route('leaves.edit', $leave) }}">Edit</a>
                                     @else

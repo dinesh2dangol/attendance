@@ -130,12 +130,14 @@ class LeaveController extends Controller
             ->whereMonth('leave_date', $month)
             ->count();
 
-        $pendingLeaves = Leave::when($userId, fn($q) => $q->where('user_id', $userId))
+        $pendingLeaves = Leave::with('employee')
+            ->when($userId, fn($q) => $q->where('user_id', $userId))
             ->where('approval_status', 0)
             ->orderBy('leave_date', 'desc')
             ->get();
 
-        $approvedLeaves = Leave::when($userId, fn($q) => $q->where('user_id', $userId))
+        $approvedLeaves = Leave::with('employee')
+            ->when($userId, fn($q) => $q->where('user_id', $userId))
             ->where('approval_status', 1)
             ->orderBy('leave_date', 'desc')
             ->get();
