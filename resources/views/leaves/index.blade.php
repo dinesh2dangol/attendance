@@ -79,6 +79,7 @@
                 </table>
             </div>
 
+            <div style="margin-top:1rem;font-weight:600;">Total Leaves: {{ $leaves->total() }}</div>
             <div style="display:flex;justify-content:flex-end">{{ $leaves->links() }}</div>
         @else
             <p>No leaves recorded yet.</p>

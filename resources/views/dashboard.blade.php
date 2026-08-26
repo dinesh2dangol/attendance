@@ -136,11 +136,11 @@
                                         <br>
                                         <strong>Leave Dates:</strong>
                                         @if (!empty($leaveDates))
-                                            @foreach ($leaveDates as $date)
+                                            @foreach ($leaveDates as $leave)
                                                 @php
-                                                    $leaveDate = \Carbon\Carbon::parse($date);
+                                                    $leaveDate = \Carbon\Carbon::parse($leave['date']);
                                                 @endphp
-                                                <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $date }}</a>@if (! $loop->last), @endif
+                                                <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
                                             @endforeach
                                         @else
                                             None

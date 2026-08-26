@@ -59,9 +59,15 @@ class LeaveController extends Controller
     {
         $validated = $request->validate([
             'user_id' => ['nullable', 'string', 'exists:employees,user_id'],
-            'leave_date' => ['required', 'date'],
+            'leave_date' => [
+                'required',
+                'date',
+                Rule::unique('leaves', 'leave_date')->where(fn ($query) => $query->where('user_id', $request->input('user_id'))),
+            ],
             'leave_type' => ['required', 'string', 'max:50'],
             'leave_description' => ['nullable', 'string', 'max:255'],
+        ], [
+            'leave_date.unique' => 'A leave request already exists for this employee on the selected date.',
         ]);
 
         // Default approval_status to 0 (pending)
@@ -95,9 +101,17 @@ class LeaveController extends Controller
 
         $validated = $request->validate([
             'user_id' => ['nullable', 'string', 'exists:employees,user_id'],
-            'leave_date' => ['required', 'date'],
+            'leave_date' => [
+                'required',
+                'date',
+                Rule::unique('leaves', 'leave_date')
+                    ->where(fn ($query) => $query->where('user_id', $request->input('user_id')))
+                    ->ignore($leave->leave_id, 'leave_id'),
+            ],
             'leave_type' => ['required', 'string', 'max:50'],
             'leave_description' => ['nullable', 'string', 'max:255'],
+        ], [
+            'leave_date.unique' => 'A leave request already exists for this employee on the selected date.',
         ]);
 
         $leave->update($validated);

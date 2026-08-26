@@ -117,9 +117,18 @@
                         @php
                             $dateKey = $day->format('Y-m-d');
                             $dayRecords = $attendances->filter(fn($row) => data_get($row, 'attendance_date') === $dateKey);
+                            $leave = $leavesByDate->get($dateKey);
                         @endphp
                         <div class="calendar-day">
                             <div class="calendar-day-date">{{ $day->format('j') }}</div>
+                            @if ($leave)
+                                <span class="attendance-chip absent">LEAVE{{ (int) $leave->approval_status === 0 ? ' (P)' : '' }}</span>
+                                <div class="attendance-details">
+                                    <div><span>Date:</span> {{ $day->format('Y-m-d') }}</div>
+                                    <div>{{ $leave->leave_type ?? '-' }}</div>
+                                    <div>{{ (int) $leave->approval_status === 1 ? 'Approved' : 'Pending' }}</div>
+                                </div>
+                            @else
                             @forelse ($dayRecords as $record)
                                 @if(data_get($record, 'day_type') === 'Weekend')
                                     <span class="attendance-chip weekend">Weekend</span>
@@ -176,6 +185,7 @@
                             @empty
                                 <span class="attendance-chip no-entry">No entry</span>
                             @endforelse
+                            @endif
                         </div>
                     @endif
                 @endforeach

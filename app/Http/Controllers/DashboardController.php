@@ -55,6 +55,12 @@ class DashboardController extends Controller
         $absentDatesByUser = DB::table('daily_attendance_step3')
             ->where('attendance_status', 'Absent')
             ->whereYear('attendance_date', $currentYear)
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('leaves')
+                    ->whereColumn('leaves.user_id', 'daily_attendance_step3.user_id')
+                    ->whereColumn('leaves.leave_date', 'daily_attendance_step3.attendance_date');
+            })
             ->select('user_id', 'attendance_date')
             ->orderBy('attendance_date')
             ->get()
@@ -73,7 +79,7 @@ class DashboardController extends Controller
 
         $leaveDatesByUser = DB::table('leaves')
             ->whereYear('leave_date', $currentYear)
-            ->select('user_id', 'leave_date')
+            ->select('user_id', 'leave_date', 'approval_status')
             ->orderBy('leave_date')
             ->get()
             ->groupBy('user_id')
@@ -81,9 +87,11 @@ class DashboardController extends Controller
                 $joinDate = $joinDatesByUser[$userId] ?? null;
 
                 return $rows
-                    ->pluck('leave_date')
-                    ->filter(fn ($date) => ! $joinDate || Carbon::parse($date)->greaterThanOrEqualTo($joinDate))
-                    ->map(fn ($date) => Carbon::parse($date)->format('Y-m-d'))
+                    ->filter(fn ($row) => ! $joinDate || Carbon::parse($row->leave_date)->greaterThanOrEqualTo($joinDate))
+                    ->map(fn ($row) => [
+                        'date' => Carbon::parse($row->leave_date)->format('Y-m-d'),
+                        'pending' => (int) $row->approval_status === 0,
+                    ])
                     ->values()
                     ->all();
             })

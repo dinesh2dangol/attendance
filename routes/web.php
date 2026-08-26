@@ -110,7 +110,13 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
         ->orderBy('attendance_date')
         ->get();
 
-    return view('attendance', compact('employee', 'attendances', 'monthStart', 'monthEnd'));
+    $leavesByDate = DB::table('leaves')
+        ->where('user_id', $employee->user_id)
+        ->whereBetween('leave_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+        ->get()
+        ->keyBy(fn ($leave) => Carbon::parse($leave->leave_date)->format('Y-m-d'));
+
+    return view('attendance', compact('employee', 'attendances', 'leavesByDate', 'monthStart', 'monthEnd'));
 })->middleware('auth')->name('employee.attendance');
 
 Route::middleware('auth')->group(function () {
