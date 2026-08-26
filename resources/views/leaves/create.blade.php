@@ -26,8 +26,9 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('leaves.store') }}">
+        <form method="POST" action="{{ auth()->user()->role?->slug === 'employee' ? route('employee.leaves.store') : route('leaves.store') }}">
             @csrf
+            @if (auth()->user()->role?->slug !== 'employee')
             <div class="field">
                 <label for="employee_id">Employee (optional)</label>
                 <select name="user_id" id="user_id">
@@ -39,6 +40,7 @@
                     @endforeach
                 </select>
             </div>
+            @endif
 
             <div class="field">
                 <label for="leave_date">Date</label>

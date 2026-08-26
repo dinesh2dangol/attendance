@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmployeePortalController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\ManualAttendanceController;
 
@@ -36,27 +38,9 @@ Route::middleware('guest')->group(function () {
 
         $request->session()->regenerate();
 
-        return redirect()->intended('/dashboard');
+        return redirect()->intended(Auth::user()->role?->slug === 'employee' ? route('employee.attendance.self') : route('dashboard'));
     });
 
-    // Route::view('register', 'auth.register')->name('register');
-
-    Route::post('register', function (Request $request) {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', 'min:8'],
-        ]);
-
-        $data['password'] = Hash::make($data['password']);
-
-        $user = User::create($data);
-
-        Auth::login($user);
-        $request->session()->regenerate();
-
-        return redirect()->intended('/dashboard');
-    });
 });
 
 Route::post('logout', function (Request $request) {
@@ -69,18 +53,25 @@ Route::post('logout', function (Request $request) {
 })->middleware('auth')->name('logout');
 
 Route::get('dashboard', [DashboardController::class, 'index'])
-    ->middleware('auth')
+    ->middleware(['auth', 'role:admin'])
     ->name('dashboard');
 
 Route::get('employees/{employee}/edit', function (App\Models\Employee $employee) {
     $departments = Department::orderBy('department_name')->get();
 
     return view('employee.edit', compact('employee', 'departments'));
-})->middleware('auth')->name('employees.edit');
+})->middleware(['auth', 'role:admin'])->name('employees.edit');
 
 Route::put('employees/{employee}', function (App\Models\Employee $employee, Request $request) {
     $validated = $request->validate([
         'employee_name' => ['required', 'string', 'max:50'],
+        'account_email' => ['nullable', 'email', 'max:255', 'unique:users,email,' . $employee->account?->id],
+        'account_password' => [
+            Rule::requiredIf(! $employee->account && $request->filled('account_email')),
+            'nullable',
+            'string',
+            'min:8',
+        ],
         'join_date_eng' => ['nullable', 'date'],
         'join_date_npt' => ['nullable', 'string', 'max:20'],
         'status' => ['nullable', 'integer'],
@@ -93,8 +84,21 @@ Route::put('employees/{employee}', function (App\Models\Employee $employee, Requ
 
     $employee->update($validated);
 
+    if ($request->filled('account_email')) {
+        $account = $employee->account ?: new User(['employee_id' => $employee->id]);
+        $account->name = $employee->employee_name;
+        $account->email = $validated['account_email'];
+        $account->role_id = \App\Models\Role::where('slug', 'employee')->value('id');
+
+        if ($request->filled('account_password')) {
+            $account->password = Hash::make($validated['account_password']);
+        }
+
+        $account->save();
+    }
+
     return redirect()->route('dashboard')->with('success', 'Employee updated successfully.');
-})->middleware('auth')->name('employees.update');
+})->middleware(['auth', 'role:admin'])->name('employees.update');
 
 Route::get('employees/{employee}/attendance', function (App\Models\Employee $employee, Request $request) {
     $month = intval($request->query('month', Carbon::now()->month));
@@ -117,17 +121,25 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
         ->keyBy(fn ($leave) => Carbon::parse($leave->leave_date)->format('Y-m-d'));
 
     return view('attendance', compact('employee', 'attendances', 'leavesByDate', 'monthStart', 'monthEnd'));
-})->middleware('auth')->name('employee.attendance');
+})->middleware(['auth', 'role:admin'])->name('employee.attendance');
 
 Route::middleware('auth')->group(function () {
-    Route::get('leaves', [LeaveController::class, 'index'])->name('leaves.index');
-    Route::get('leaves/create', [LeaveController::class, 'create'])->name('leaves.create');
-    Route::post('leaves', [LeaveController::class, 'store'])->name('leaves.store');
-    Route::get('leaves/{leave}/edit', [LeaveController::class, 'edit'])->name('leaves.edit');
-    Route::put('leaves/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
-    Route::get('leaves/approval', [LeaveController::class, 'approval'])->name('leaves.approval');
-    Route::post('leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve');
+    Route::middleware('role:admin')->group(function () {
+        Route::get('leaves', [LeaveController::class, 'index'])->name('leaves.index');
+        Route::get('leaves/create', [LeaveController::class, 'create'])->name('leaves.create');
+        Route::post('leaves', [LeaveController::class, 'store'])->name('leaves.store');
+        Route::get('leaves/{leave}/edit', [LeaveController::class, 'edit'])->name('leaves.edit');
+        Route::put('leaves/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
+        Route::get('leaves/approval', [LeaveController::class, 'approval'])->name('leaves.approval');
+        Route::post('leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve');
 
-    Route::get('manual-attendance/create', [ManualAttendanceController::class, 'create'])->name('manual-attendance.create');
-    Route::post('manual-attendance', [ManualAttendanceController::class, 'store'])->name('manual-attendance.store');
+        Route::get('manual-attendance/create', [ManualAttendanceController::class, 'create'])->name('manual-attendance.create');
+        Route::post('manual-attendance', [ManualAttendanceController::class, 'store'])->name('manual-attendance.store');
+    });
+});
+
+Route::middleware(['auth', 'role:employee'])->group(function () {
+    Route::get('my-attendance', [EmployeePortalController::class, 'attendance'])->name('employee.attendance.self');
+    Route::get('my-leaves/create', [LeaveController::class, 'create'])->name('employee.leaves.create');
+    Route::post('my-leaves', [LeaveController::class, 'store'])->name('employee.leaves.store');
 });

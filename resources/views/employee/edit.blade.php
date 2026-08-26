@@ -50,6 +50,16 @@
             </label>
 
             <label>
+                Employee Login Email
+                <input type="email" name="account_email" value="{{ old('account_email', $employee->account?->email) }}" />
+            </label>
+
+            <label>
+                Employee Login Password
+                <input type="password" name="account_password" minlength="8" placeholder="Leave blank to keep current password" />
+            </label>
+
+            <label>
                 Join Date (ENG)
                 <input type="datetime-local" name="join_date_eng" value="{{ old('join_date_eng', optional($employee->join_date_eng)->format('Y-m-d\TH:i')) }}" />
             </label>

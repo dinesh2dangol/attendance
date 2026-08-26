@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -18,11 +19,14 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
+        $adminRole = Role::where('slug', 'admin')->first();
+
         User::updateOrCreate([
             'email' => 'test@example.com',
         ], [
             'name' => 'Test User',
             'password' => Hash::make('password'),
+            'role_id' => $adminRole?->id,
         ]);
 
         if (! \App\Models\Department::query()->exists()) {

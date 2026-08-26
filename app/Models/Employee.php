@@ -41,4 +41,9 @@ class Employee extends Model
     {
         return $this->hasMany(Attendance::class);
     }
+
+    public function account()
+    {
+        return $this->hasOne(User::class);
+    }
 }

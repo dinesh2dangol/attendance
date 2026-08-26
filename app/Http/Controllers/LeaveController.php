@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class LeaveController extends Controller
@@ -45,6 +46,10 @@ class LeaveController extends Controller
 
     public function create(Request $request)
     {
+        if (Auth::user()?->role?->slug === 'employee' && ! Auth::user()->employee) {
+            abort(403, 'Your account is not linked to an employee record.');
+        }
+
         // Use employees list; we'll store the employee's user_id on the leaves table
         $employees = Employee::orderBy('employee_name')->get();
 
@@ -57,8 +62,11 @@ class LeaveController extends Controller
 
     public function store(Request $request)
     {
+        $isEmployee = Auth::user()?->role?->slug === 'employee';
+        $employeeUserId = Auth::user()?->employee?->user_id;
+
         $validated = $request->validate([
-            'user_id' => ['nullable', 'string', 'exists:employees,user_id'],
+            'user_id' => [$isEmployee ? 'prohibited' : 'nullable', 'string', 'exists:employees,user_id'],
             'leave_date' => [
                 'required',
                 'date',
@@ -71,11 +79,17 @@ class LeaveController extends Controller
         ]);
 
         // Default approval_status to 0 (pending)
+        if ($isEmployee) {
+            $validated['user_id'] = $employeeUserId;
+        }
+
         $validated['approval_status'] = 0;
 
         Leave::create($validated);
 
-        return redirect()->route('leaves.index', ['user_id' => $validated['user_id'] ?? null])->with('success', 'Leave created successfully.');
+        return $isEmployee
+            ? redirect()->route('employee.attendance.self', ['month' => Carbon::parse($validated['leave_date'])->month, 'year' => Carbon::parse($validated['leave_date'])->year])->with('success', 'Leave created successfully.')
+            : redirect()->route('leaves.index', ['user_id' => $validated['user_id'] ?? null])->with('success', 'Leave created successfully.');
     }
 
     public function edit(Leave $leave)

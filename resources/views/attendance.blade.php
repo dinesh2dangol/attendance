@@ -59,7 +59,7 @@
                 <h1>Attendance for {{ $employee->employee_name }}</h1>
                 <p>Department: {{ $employee->department?->department_name ?? 'N/A' }}</p>
             </div>
-            <a class="button button-secondary" href="{{ route('dashboard') }}">Back to Dashboard</a>
+            <a class="button button-secondary" href="{{ auth()->user()->role?->slug === 'employee' ? route('employee.attendance.self') : route('dashboard') }}">Back to Dashboard</a>
         </div>
 
         <section>
@@ -140,8 +140,10 @@
                                     <div class="attendance-details">
                                         <div><span>Date:</span> {{ $day->format('Y-m-d') }}</div>
                                     </div>
-                                    <a class="button button-secondary" href="{{ route('leaves.create', ['user_id' => $employee->user_id, 'leave_date' => $day->format('Y-m-d')]) }}" style="font-size: 0.75rem; padding: 0.5rem 0.7rem; margin-top: 0.15rem;">Add Leave</a>
-                                    <a class="button button-secondary" href="{{ route('manual-attendance.create', ['user_id' => $employee->user_id, 'timestamp' => $day->format('Y-m-d') . 'T09:00']) }}" style="font-size: 0.75rem; padding: 0.5rem 0.7rem; margin-top: 0.15rem;">Add Manual Attendance</a>
+                                    @if (auth()->user()->role?->slug === 'admin')
+                                        <a class="button button-secondary" href="{{ route('leaves.create', ['user_id' => $employee->user_id, 'leave_date' => $day->format('Y-m-d')]) }}" style="font-size: 0.75rem; padding: 0.5rem 0.7rem; margin-top: 0.15rem;">Add Leave</a>
+                                        <a class="button button-secondary" href="{{ route('manual-attendance.create', ['user_id' => $employee->user_id, 'timestamp' => $day->format('Y-m-d') . 'T09:00']) }}" style="font-size: 0.75rem; padding: 0.5rem 0.7rem; margin-top: 0.15rem;">Add Manual Attendance</a>
+                                    @endif
                                 @elseif(data_get($record, 'attendance_status') === 'Leave')
                                 <span class="attendance-chip absent">
                                     LEAVE
