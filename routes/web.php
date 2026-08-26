@@ -12,6 +12,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeePortalController;
+use App\Http\Controllers\EmployeeAccountController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\ManualAttendanceController;
 
@@ -38,7 +39,9 @@ Route::middleware('guest')->group(function () {
 
         $request->session()->regenerate();
 
-        return redirect()->intended(Auth::user()->role?->slug === 'employee' ? route('employee.attendance.self') : route('dashboard'));
+        return Auth::user()->role?->slug === 'employee'
+            ? redirect()->route('employee.attendance.self')
+            : redirect()->route('dashboard');
     });
 
 });
@@ -53,8 +56,13 @@ Route::post('logout', function (Request $request) {
 })->middleware('auth')->name('logout');
 
 Route::get('dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'role:admin'])
+    ->middleware('auth')
     ->name('dashboard');
+
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('employee-accounts', [EmployeeAccountController::class, 'index'])->name('employee-accounts.index');
+    Route::post('employee-accounts/{employee}', [EmployeeAccountController::class, 'store'])->name('employee-accounts.store');
+});
 
 Route::get('employees/{employee}/edit', function (App\Models\Employee $employee) {
     $departments = Department::orderBy('department_name')->get();
@@ -140,6 +148,7 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'role:employee'])->group(function () {
     Route::get('my-attendance', [EmployeePortalController::class, 'attendance'])->name('employee.attendance.self');
+    Route::get('my-leaves', [LeaveController::class, 'index'])->name('employee.leaves.index');
     Route::get('my-leaves/create', [LeaveController::class, 'create'])->name('employee.leaves.create');
     Route::post('my-leaves', [LeaveController::class, 'store'])->name('employee.leaves.store');
 });

@@ -15,7 +15,7 @@ class EmployeePortalController extends Controller
         abort_unless($employee, 403, 'Your account is not linked to an employee record.');
 
         $month = (int) $request->query('month', Carbon::now()->month);
-        $year = (int) $request->query('year', Carbon::now()->year);
+        $year = Carbon::now()->year;
         $monthStart = Carbon::create($year, $month, 1)->startOfMonth();
         $monthEnd = $monthStart->copy()->endOfMonth();
 

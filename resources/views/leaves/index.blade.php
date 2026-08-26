@@ -29,9 +29,14 @@
                 @endif
             </div>
             <div style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center;">
-                <a href="{{ route('dashboard') }}" class="button button-secondary">Back to Dashboard</a>
-                <a href="{{ route('leaves.approval', ['user_id' => request('user_id')]) }}" class="button button-secondary">Approval</a>
-                <a href="{{ route('leaves.create', ['user_id' => request('user_id')]) }}" class="button">Add Leave</a>
+                @if (auth()->user()->role?->slug === 'employee')
+                    <a href="{{ route('employee.attendance.self') }}" class="button button-secondary">My Attendance</a>
+                    <a href="{{ route('employee.leaves.create') }}" class="button">Apply Leave</a>
+                @else
+                    <a href="{{ route('dashboard') }}" class="button button-secondary">Back to Dashboard</a>
+                    <a href="{{ route('leaves.approval', ['user_id' => request('user_id')]) }}" class="button button-secondary">Approval</a>
+                    <a href="{{ route('leaves.create', ['user_id' => request('user_id')]) }}" class="button">Add Leave</a>
+                @endif
             </div>
         </div>
 

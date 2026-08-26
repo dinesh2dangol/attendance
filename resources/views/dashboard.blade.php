@@ -41,6 +41,8 @@
             </form>
         </div>
 
+        <p><a class="button button-secondary" href="{{ route('employee-accounts.index') }}">Manage Employee Logins</a></p>
+
         <section>
             <form method="GET" action="{{ route('dashboard') }}" class="filters">
                 <div class="field-group">

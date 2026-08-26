@@ -17,6 +17,7 @@
         .calendar-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 1.25rem; }
         .calendar-actions label { display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.9rem; color: #334155; }
         .calendar-actions select { min-width: 150px; padding: 0.75rem 0.85rem; border-radius: 0.75rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #0f172a; }
+        .calendar-actions .disabled { pointer-events: none; opacity: 0.5; }
         .calendar-card { border: 1px solid #e2e8f0; border-radius: 1rem; overflow: hidden; background: #ffffff; box-shadow: 0 0 0 1px rgba(203, 213, 225, 0.35); }
         .calendar-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
         .calendar-title { margin: 0; font-size: 1.1rem; font-weight: 700; }
@@ -59,7 +60,15 @@
                 <h1>Attendance for {{ $employee->employee_name }}</h1>
                 <p>Department: {{ $employee->department?->department_name ?? 'N/A' }}</p>
             </div>
-            <a class="button button-secondary" href="{{ auth()->user()->role?->slug === 'employee' ? route('employee.attendance.self') : route('dashboard') }}">Back to Dashboard</a>
+            <div style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center;">
+                @if (auth()->user()->role?->slug === 'employee')
+                    <a class="button button-secondary" href="{{ route('employee.leaves.index') }}">My Leaves</a>
+                @endif
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button class="button button-secondary" type="submit">Log out</button>
+                </form>
+            </div>
         </div>
 
         <section>
@@ -69,7 +78,7 @@
                         <p class="calendar-title">Monthly Attendance</p>
                         <p class="calendar-subtitle">{{ $monthStart->format('F Y') }} for {{ $employee->employee_name }}</p>
                     </div>
-                    <form method="GET" action="{{ route('employee.attendance', $employee) }}" class="calendar-actions">
+                    <form method="GET" action="{{ auth()->user()->role?->slug === 'employee' ? route('employee.attendance.self') : route('employee.attendance', $employee) }}" class="calendar-actions">
                         <label>
                             Month
                             <select name="month" onchange="this.form.submit()">
@@ -80,12 +89,16 @@
                         </label>
                         <label>
                             Year
-                            <select name="year" onchange="this.form.submit()">
-                                @foreach (range(date('Y') - 2, date('Y') + 1) as $year)
-                                    <option value="{{ $year }}" {{ $monthStart->year === $year ? 'selected' : '' }}>{{ $year }}</option>
-                                @endforeach
-                            </select>
+                            <input type="hidden" name="year" value="{{ $monthStart->year }}">
+                            <span>{{ $monthStart->year }}</span>
                         </label>
+                        @if ($monthStart->month === 1)
+                            <span class="button button-secondary disabled">Previous Month</span>
+                        @elseif (auth()->user()->role?->slug === 'employee')
+                            <a class="button button-secondary" href="{{ route('employee.attendance.self', ['month' => $monthStart->month - 1, 'year' => $monthStart->year]) }}">Previous Month</a>
+                        @else
+                            <a class="button button-secondary" href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $monthStart->month - 1, 'year' => $monthStart->year]) }}">Previous Month</a>
+                        @endif
                         <button class="button" type="submit">Go</button>
                     </form>
                 </div>

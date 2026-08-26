@@ -34,6 +34,11 @@ class LeaveController extends Controller
         $userId = $request->query('user_id');
         $filterEmployee = null;
 
+        if (Auth::user()?->role?->slug === 'employee') {
+            $userId = Auth::user()->employee?->user_id;
+            abort_unless($userId, 403, 'Your account is not linked to an employee record.');
+        }
+
         if ($userId) {
             $query->where('user_id', $userId);
             $filterEmployee = Employee::where('user_id', $userId)->first();

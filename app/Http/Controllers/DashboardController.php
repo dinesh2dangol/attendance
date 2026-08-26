@@ -12,6 +12,10 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        if ($request->user()->role?->slug === 'employee') {
+            return redirect()->route('employee.attendance.self');
+        }
+
         $departments = Department::orderBy('department_name')->get();
         $defaultDepartmentId = $departments->skip(3)->first()?->department_id;
 
