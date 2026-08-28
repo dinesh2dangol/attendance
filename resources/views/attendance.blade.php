@@ -23,11 +23,13 @@
         .calendar-title { margin: 0; font-size: 1.1rem; font-weight: 700; }
         .calendar-subtitle { margin: 0.35rem 0 0; color: #64748b; font-size: 0.95rem; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.75rem; padding: 1.25rem; }
+        .calendar-weekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.75rem; padding: 0 1.25rem; margin-bottom: 0.5rem; }
         .calendar-weekday { text-align: center; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; padding: 0.65rem 0; }
         .calendar-day { min-height: 130px; border-radius: 1rem; padding: 0.9rem; background: #f8fafc; display: flex; flex-direction: column; justify-content: flex-start; gap: 0.75rem; border: 1px solid transparent; transition: border-color 160ms ease, transform 160ms ease; }
         .calendar-day:hover { transform: translateY(-1px); border-color: #93c5fd; }
         .calendar-day.empty { background: #f1f5f9; color: #94a3b8; box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12); }
         .calendar-day-date { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 0.75rem; background: #e2e8f0; color: #0f172a; font-weight: 700; }
+        .calendar-day-week { display: none; font-size: 0.78rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.06em; }
         .attendance-chip { display: inline-flex; align-items: center; justify-content: center; width: fit-content; padding: 0.45rem 0.65rem; border-radius: 9999px; font-size: 0.78rem; font-weight: 600; text-transform: capitalize; }
         .attendance-chip.present { background: #dcfce7; color: #166534; }
         .attendance-chip.absent { background: #fee2e2; color: #991b1b; }
@@ -45,10 +47,16 @@
         .legend-bullet.no-entry { background: #e2e8f0; }
         @media (max-width: 900px) {
             .calendar-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .calendar-weekdays { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .calendar-weekdays { display: none; }
+            .calendar-day-week { display: block; }
         }
         @media (max-width: 640px) {
             .toolbar, .calendar-header { flex-direction: column; align-items: stretch; }
             .calendar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .calendar-weekdays { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .calendar-weekdays { display: none; }
+            .calendar-day-week { display: block; }
             .calendar-actions { flex-direction: column; align-items: stretch; }
         }
     </style>
@@ -102,7 +110,7 @@
                     </form>
                 </div>
 
-                <div class="calendar-grid">
+                <div class="calendar-weekdays">
                     <div class="calendar-weekday">Sun</div>
                     <div class="calendar-weekday">Mon</div>
                     <div class="calendar-weekday">Tue</div>
@@ -110,7 +118,9 @@
                     <div class="calendar-weekday">Thu</div>
                     <div class="calendar-weekday">Fri</div>
                     <div class="calendar-weekday">Sat</div>
+                </div>
 
+                <div class="calendar-grid">
                 @php
                     $days = [];
                     $startDay = $monthStart->dayOfWeek;
@@ -132,6 +142,7 @@
                             $leave = $leavesByDate->get($dateKey);
                         @endphp
                         <div class="calendar-day">
+                            <div class="calendar-day-week">{{ $day->format('D') }}</div>
                             <div class="calendar-day-date">{{ $day->format('j') }}</div>
                             @if ($leave)
                                 <span class="attendance-chip absent">LEAVE{{ (int) $leave->approval_status === 0 ? ' (P)' : '' }}</span>
