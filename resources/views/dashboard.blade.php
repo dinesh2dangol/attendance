@@ -20,6 +20,78 @@
         th, td { padding: 0.75rem 0.85rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
         th { background: #f3f4f6; font-weight: 600; }
         tbody tr:hover { background: #f9fafb; }
+
+        .desktop-table { display: block; }
+        .mobile-list { display: none; }
+        .mobile-employee-item { margin-bottom: 0.75rem; }
+        .swipe-shell {
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.85rem;
+            background: #fff;
+            min-height: 155px;
+        }
+        .swipe-track {
+            display: flex;
+            width: 200%;
+            transition: transform 0.28s ease;
+        }
+        .swipe-main,
+        .swipe-detail {
+            flex: 0 0 50%;
+            width: 50%;
+            box-sizing: border-box;
+            background: #fff;
+        }
+        .swipe-main {
+            padding: 0.9rem 1rem;
+        }
+        .swipe-detail {
+            padding: 0.9rem 1rem;
+            background: #f8fafc;
+            border-left: 1px solid #e5e7eb;
+        }
+        .swipe-shell.is-open .swipe-track {
+            transform: translateX(-50%);
+        }
+        .mobile-meta {
+            display: grid;
+            gap: 0.5rem;
+            font-size: 0.88rem;
+            color: #374151;
+        }
+        .detail-label {
+            display: block;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+        .swipe-detail p {
+            margin: 0;
+            line-height: 1.5;
+            font-size: 0.88rem;
+            color: #374151;
+        }
+        .swipe-detail .date-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem 0.5rem;
+            margin-top: 0.35rem;
+        }
+        .swipe-detail a {
+            color: #1d4ed8;
+            text-decoration: none;
+        }
+        .mobile-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.8rem;
+        }
+
         .pagination { display: flex; justify-content: flex-end; }
         .pagination nav { display: inline-flex; gap: 0.5rem; }
         .pagination svg,
@@ -52,6 +124,12 @@
                 width: 100%;
                 justify-content: center;
                 text-align: center;
+            }
+            .desktop-table {
+                display: none;
+            }
+            .mobile-list {
+                display: block;
             }
             .table-wrap {
                 margin: 0 -0.25rem;
@@ -140,85 +218,147 @@
             </form>
 
             @if (isset($employees) && $employees->isNotEmpty())
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>User ID</th>
-                                <th>Name</th>
-                                <th>Join Date (ENG)</th>
-                                <th>Status</th>
-                                <th>Dept</th>
-                                <th>Gender</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($employees as $employee)
-                                @php
-                                    $absentDates = $absentDatesByUser[$employee->user_id] ?? [];
-                                    $leaveDates = $leaveDatesByUser[$employee->user_id] ?? [];
-                                @endphp
+                <div class="desktop-table">
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
                                 <tr>
-                                    <td>{{ $employee->id }}</td>
-                                    <td>{{ $employee->user_id }}</td>
-                                    <td>{{ $employee->employee_name }}</td>
-                                    <td>{{ optional($employee->join_date_eng)->format('Y-m-d') }}</td>
-                                    <td>{{ $employee->status }}</td>
-                                    <td>{{ $employee->department?->department_name ?? $employee->department_id }}</td>
-                                    <td>{{ $employee->gender }}</td>
-                                    <td>
-                                        @if(auth()->user()?->role?->slug === 'employee')
-                                            <a href="{{ route('employee.attendance.self') }}">Attendance</a>
-                                        @else
-                                            <a href="{{ route('employee.attendance', $employee) }}">Attendance</a>
-                                        @endif
-                                        |
-                                        <a href="{{ route('employees.edit', $employee) }}">Edit</a>
-                                        |
-                                        <a href="{{ route('leaves.index', ['user_id' => $employee->user_id]) }}">Leaves</a>
-                                        |
-                                    </td>
+                                    <th>ID</th>
+                                    <th>User ID</th>
+                                    <th>Name</th>
+                                    <th>Join Date (ENG)</th>
+                                    <th>Status</th>
+                                    <th>Dept</th>
+                                    <th>Gender</th>
+                                    <th>Action</th>
                                 </tr>
-                                <tr>
-                                    <td colspan="8">
-                                        <strong>Absent Dates:</strong>
-                                        @if (!empty($absentDates))
-                                            @foreach ($absentDates as $date)
-                                                @php
-                                                    $absentDate = \Carbon\Carbon::parse($date);
-                                                @endphp
-                                                @if(auth()->user()?->role?->slug === 'employee')
-                                                    <a href="{{ route('employee.attendance.self', ['month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>@if (! $loop->last), @endif
-                                                @else
-                                                    <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>@if (! $loop->last), @endif
-                                                @endif
-                                            @endforeach
+                            </thead>
+                            <tbody>
+                                @foreach ($employees as $employee)
+                                    @php
+                                        $absentDates = $absentDatesByUser[$employee->user_id] ?? [];
+                                        $leaveDates = $leaveDatesByUser[$employee->user_id] ?? [];
+                                    @endphp
+                                    <tr>
+                                        <td>{{ $employee->id }}</td>
+                                        <td>{{ $employee->user_id }}</td>
+                                        <td>{{ $employee->employee_name }}</td>
+                                        <td>{{ optional($employee->join_date_eng)->format('Y-m-d') }}</td>
+                                        <td>{{ $employee->status }}</td>
+                                        <td>{{ $employee->department?->department_name ?? $employee->department_id }}</td>
+                                        <td>{{ $employee->gender }}</td>
+                                        <td>
+                                            @if(auth()->user()?->role?->slug === 'employee')
+                                                <a href="{{ route('employee.attendance.self') }}">Attendance</a>
+                                            @else
+                                                <a href="{{ route('employee.attendance', $employee) }}">Attendance</a>
+                                            @endif
+                                            |
+                                            <a href="{{ route('employees.edit', $employee) }}">Edit</a>
+                                            |
+                                            <a href="{{ route('leaves.index', ['user_id' => $employee->user_id]) }}">Leaves</a>
+                                            |
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="8">
+                                            <strong>Absent Dates:</strong>
+                                            @if (!empty($absentDates))
+                                                @foreach ($absentDates as $date)
+                                                    @php
+                                                        $absentDate = \Carbon\Carbon::parse($date);
+                                                    @endphp
+                                                    @if(auth()->user()?->role?->slug === 'employee')
+                                                        <a href="{{ route('employee.attendance.self', ['month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>@if (! $loop->last), @endif
+                                                    @else
+                                                        <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>@if (! $loop->last), @endif
+                                                    @endif
+                                                @endforeach
+                                            @else
+                                                None
+                                            @endif
+                                            <br>
+                                            <strong>Leave Dates:</strong>
+                                            @if (!empty($leaveDates))
+                                                @foreach ($leaveDates as $leave)
+                                                    @php
+                                                        $leaveDate = \Carbon\Carbon::parse($leave['date']);
+                                                    @endphp
+                                                    @if(auth()->user()?->role?->slug === 'employee')
+                                                        <a href="{{ route('employee.attendance.self', ['month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
+                                                    @else
+                                                        <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
+                                                    @endif
+                                                @endforeach
+                                            @else
+                                                None
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mobile-list">
+                    @foreach ($employees as $employee)
+                        @php
+                            $absentDates = $absentDatesByUser[$employee->user_id] ?? [];
+                            $leaveDates = $leaveDatesByUser[$employee->user_id] ?? [];
+                        @endphp
+                        <div class="mobile-employee-item">
+                            <div class="swipe-shell" data-swipe-shell>
+                                <div class="swipe-track">
+                                    <div class="swipe-main">
+                                        <div class="mobile-meta">
+                                            <div><span class="detail-label">Name</span><strong>{{ $employee->employee_name }}</strong></div>
+                                            <div><span class="detail-label">Department</span><strong>{{ $employee->department?->department_name ?? $employee->department_id }}</strong></div>
+                                            <div><span class="detail-label">Status</span><strong>{{ $employee->status }}</strong></div>
+                                        </div>
+                                        <div class="mobile-actions">
+                                            @if(auth()->user()?->role?->slug === 'employee')
+                                                <a class="button button-secondary" href="{{ route('employee.attendance.self') }}">Attendance</a>
+                                            @else
+                                                <a class="button button-secondary" href="{{ route('employee.attendance', $employee) }}">Attendance</a>
+                                            @endif
+                                            <a class="button button-secondary" href="{{ route('employees.edit', $employee) }}">Edit</a>
+                                        </div>
+                                    </div>
+                                    <div class="swipe-detail">
+                                        <span class="detail-label">Absent &amp; Leave</span>
+                                        @if (!empty($absentDates) || !empty($leaveDates))
+                                            <div class="date-list">
+                                                @foreach ($absentDates as $date)
+                                                    @php
+                                                        $absentDate = \Carbon\Carbon::parse($date);
+                                                    @endphp
+                                                    @if(auth()->user()?->role?->slug === 'employee')
+                                                        <a href="{{ route('employee.attendance.self', ['month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>
+                                                    @else
+                                                        <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>
+                                                    @endif
+                                                @endforeach
+
+                                                @foreach ($leaveDates as $leave)
+                                                    @php
+                                                        $leaveDate = \Carbon\Carbon::parse($leave['date']);
+                                                    @endphp
+                                                    @if(auth()->user()?->role?->slug === 'employee')
+                                                        <a href="{{ route('employee.attendance.self', ['month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>
+                                                    @else
+                                                        <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>
+                                                    @endif
+                                                @endforeach
+                                            </div>
                                         @else
-                                            None
+                                            <p>None</p>
                                         @endif
-                                        <br>
-                                        <strong>Leave Dates:</strong>
-                                        @if (!empty($leaveDates))
-                                            @foreach ($leaveDates as $leave)
-                                                @php
-                                                    $leaveDate = \Carbon\Carbon::parse($leave['date']);
-                                                @endphp
-                                                @if(auth()->user()?->role?->slug === 'employee')
-                                                    <a href="{{ route('employee.attendance.self', ['month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
-                                                @else
-                                                    <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
-                                                @endif
-                                            @endforeach
-                                        @else
-                                            None
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
 
                 <div class="pagination">
@@ -229,5 +369,60 @@
             @endif
         </section>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const shells = document.querySelectorAll('[data-swipe-shell]');
+
+            shells.forEach(function (shell) {
+                let startX = 0;
+                let currentX = 0;
+                let dragging = false;
+
+                const open = function () {
+                    shell.classList.add('is-open');
+                };
+
+                const close = function () {
+                    shell.classList.remove('is-open');
+                };
+
+                shell.addEventListener('touchstart', function (event) {
+                    startX = event.touches[0].clientX;
+                    currentX = startX;
+                    dragging = true;
+                }, { passive: true });
+
+                shell.addEventListener('touchmove', function (event) {
+                    if (!dragging) return;
+                    currentX = event.touches[0].clientX;
+                }, { passive: true });
+
+                shell.addEventListener('touchend', function () {
+                    if (!dragging) return;
+
+                    const diff = currentX - startX;
+                    if (diff < -50) {
+                        open();
+                    } else if (diff > 50) {
+                        close();
+                    } else {
+                        shell.classList.contains('is-open') ? close() : open();
+                    }
+
+                    dragging = false;
+                });
+
+                shell.addEventListener('click', function (event) {
+                    const interactiveTag = event.target.closest('button, a, input, select, textarea, form');
+                    if (interactiveTag) {
+                        return;
+                    }
+
+                    shell.classList.toggle('is-open');
+                });
+            });
+        });
+    </script>
 </body>
 </html>
