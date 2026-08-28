@@ -28,6 +28,9 @@
         .calendar-day { min-height: 130px; border-radius: 1rem; padding: 0.9rem; background: #f8fafc; display: flex; flex-direction: column; justify-content: flex-start; gap: 0.75rem; border: 1px solid transparent; transition: border-color 160ms ease, transform 160ms ease; }
         .calendar-day:hover { transform: translateY(-1px); border-color: #93c5fd; }
         .calendar-day.empty { background: #f1f5f9; color: #94a3b8; box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12); }
+        .calendar-day.other-month { background: transparent; color: #94a3b8; box-shadow: none; border-color: transparent; }
+        .calendar-day.other-month .attendance-chip,
+        .calendar-day.other-month .attendance-details { display: none; }
         .calendar-day-date { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 0.75rem; background: #e2e8f0; color: #0f172a; font-weight: 700; }
         .calendar-day-week { display: none; font-size: 0.78rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.06em; }
         .attendance-chip { display: inline-flex; align-items: center; justify-content: center; width: fit-content; padding: 0.45rem 0.65rem; border-radius: 9999px; font-size: 0.78rem; font-weight: 600; text-transform: capitalize; }
@@ -124,26 +127,34 @@
                 @php
                     $days = [];
                     $startDay = $monthStart->dayOfWeek;
+                    // include preceding month's tail days so their day numbers are shown
+                    $firstSlot = $monthStart->copy()->subDays($startDay);
                     for ($i = 0; $i < $startDay; $i++) {
-                        $days[] = null;
+                        $days[] = $firstSlot->copy()->addDays($i);
                     }
                     for ($day = 1; $day <= $monthEnd->day; $day++) {
                         $days[] = $monthStart->copy()->day($day);
                     }
+                    // append next-month leading days so the total slots are a multiple of 7
+                    $remainder = count($days) % 7;
+                    if ($remainder !== 0) {
+                        $toAdd = 7 - $remainder;
+                        for ($i = 1; $i <= $toAdd; $i++) {
+                            $days[] = $monthEnd->copy()->addDays($i);
+                        }
+                    }
                 @endphp
 
                 @foreach ($days as $day)
-                    @if ($day === null)
-                        <div class="calendar-day empty"></div>
-                    @else
-                        @php
-                            $dateKey = $day->format('Y-m-d');
-                            $dayRecords = $attendances->filter(fn($row) => data_get($row, 'attendance_date') === $dateKey);
-                            $leave = $leavesByDate->get($dateKey);
-                        @endphp
-                        <div class="calendar-day">
-                            <div class="calendar-day-week">{{ $day->format('D') }}</div>
-                            <div class="calendar-day-date">{{ $day->format('j') }}</div>
+                    @php
+                        $isCurrentMonth = $day->month === $monthStart->month;
+                        $dateKey = $day->format('Y-m-d');
+                        $dayRecords = $isCurrentMonth ? $attendances->filter(fn($row) => data_get($row, 'attendance_date') === $dateKey) : collect();
+                        $leave = $isCurrentMonth ? $leavesByDate->get($dateKey) : null;
+                    @endphp
+                    <div class="calendar-day{{ $isCurrentMonth ? '' : ' other-month' }}">
+                        <div class="calendar-day-week">{{ $day->format('D') }}</div>
+                        <div class="calendar-day-date">{{ $day->format('j') }}</div>
                             @if ($leave)
                                 <span class="attendance-chip absent">LEAVE{{ (int) $leave->approval_status === 0 ? ' (P)' : '' }}</span>
                                 <div class="attendance-details">
@@ -212,7 +223,6 @@
                             @endforelse
                             @endif
                         </div>
-                    @endif
                 @endforeach
             </div>
 
