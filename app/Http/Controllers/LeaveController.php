@@ -70,17 +70,21 @@ class LeaveController extends Controller
         $isEmployee = Auth::user()?->role?->slug === 'employee';
         $employeeUserId = Auth::user()?->employee?->user_id;
 
+        $userIdForRule = $isEmployee ? $employeeUserId : $request->input('user_id');
+        $leaveDateRules = ['required', 'date', Rule::unique('leaves', 'leave_date')->where(fn ($query) => $query->where('user_id', $userIdForRule))];
+        // Employees may not apply for past dates
+        if ($isEmployee) {
+            $leaveDateRules[] = 'after_or_equal:today';
+        }
+
         $validated = $request->validate([
             'user_id' => [$isEmployee ? 'prohibited' : 'nullable', 'string', 'exists:employees,user_id'],
-            'leave_date' => [
-                'required',
-                'date',
-                Rule::unique('leaves', 'leave_date')->where(fn ($query) => $query->where('user_id', $request->input('user_id'))),
-            ],
+            'leave_date' => $leaveDateRules,
             'leave_type' => ['required', 'string', 'max:50'],
             'leave_description' => ['nullable', 'string', 'max:255'],
         ], [
             'leave_date.unique' => 'A leave request already exists for this employee on the selected date.',
+            'leave_date.after_or_equal' => 'You cannot apply for a past date.',
         ]);
 
         // Default approval_status to 0 (pending)
@@ -99,8 +103,17 @@ class LeaveController extends Controller
 
     public function edit(Leave $leave)
     {
+        // Only pending leaves editable
         if ($leave->approval_status !== 0) {
             return redirect()->route('leaves.index', ['user_id' => $leave->user_id])->with('error', 'Only pending leaves can be edited.');
+        }
+
+        // If current user is an employee, ensure they own this leave
+        if (Auth::user()?->role?->slug === 'employee') {
+            $employeeUserId = Auth::user()->employee?->user_id;
+            if (! $employeeUserId || $leave->user_id !== $employeeUserId) {
+                abort(403, 'You are not authorized to edit this leave.');
+            }
         }
 
         $employees = Employee::orderBy('employee_name')->get();
@@ -117,20 +130,36 @@ class LeaveController extends Controller
         if ($leave->approval_status !== 0) {
             return redirect()->route('leaves.index', ['user_id' => $leave->user_id])->with('error', 'Approved leaves cannot be edited.');
         }
+        // If current user is an employee, ensure they own this leave
+        if (Auth::user()?->role?->slug === 'employee') {
+            $employeeUserId = Auth::user()->employee?->user_id;
+            if (! $employeeUserId || $leave->user_id !== $employeeUserId) {
+                abort(403, 'You are not authorized to update this leave.');
+            }
+        }
+        $isEmployee = Auth::user()?->role?->slug === 'employee';
+
+        $userIdForRule = $request->input('user_id') ?? $leave->user_id;
+        $leaveDateRules = [
+            'required',
+            'date',
+            Rule::unique('leaves', 'leave_date')
+                ->where(fn ($query) => $query->where('user_id', $userIdForRule))
+                ->ignore($leave->leave_id, 'leave_id'),
+        ];
+
+        if ($isEmployee) {
+            $leaveDateRules[] = 'after_or_equal:today';
+        }
 
         $validated = $request->validate([
             'user_id' => ['nullable', 'string', 'exists:employees,user_id'],
-            'leave_date' => [
-                'required',
-                'date',
-                Rule::unique('leaves', 'leave_date')
-                    ->where(fn ($query) => $query->where('user_id', $request->input('user_id')))
-                    ->ignore($leave->leave_id, 'leave_id'),
-            ],
+            'leave_date' => $leaveDateRules,
             'leave_type' => ['required', 'string', 'max:50'],
             'leave_description' => ['nullable', 'string', 'max:255'],
         ], [
             'leave_date.unique' => 'A leave request already exists for this employee on the selected date.',
+            'leave_date.after_or_equal' => 'You cannot set a past date.',
         ]);
 
         $leave->update($validated);

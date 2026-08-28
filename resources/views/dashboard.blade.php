@@ -114,7 +114,11 @@
                                     <td>{{ $employee->department?->department_name ?? $employee->department_id }}</td>
                                     <td>{{ $employee->gender }}</td>
                                     <td>
-                                        <a href="{{ route('employee.attendance', $employee) }}">Attendance</a>
+                                        @if(auth()->user()?->role?->slug === 'employee')
+                                            <a href="{{ route('employee.attendance.self') }}">Attendance</a>
+                                        @else
+                                            <a href="{{ route('employee.attendance', $employee) }}">Attendance</a>
+                                        @endif
                                         |
                                         <a href="{{ route('employees.edit', $employee) }}">Edit</a>
                                         |
@@ -130,7 +134,11 @@
                                                 @php
                                                     $absentDate = \Carbon\Carbon::parse($date);
                                                 @endphp
-                                                <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>@if (! $loop->last), @endif
+                                                @if(auth()->user()?->role?->slug === 'employee')
+                                                    <a href="{{ route('employee.attendance.self', ['month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>@if (! $loop->last), @endif
+                                                @else
+                                                    <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>@if (! $loop->last), @endif
+                                                @endif
                                             @endforeach
                                         @else
                                             None
@@ -142,7 +150,11 @@
                                                 @php
                                                     $leaveDate = \Carbon\Carbon::parse($leave['date']);
                                                 @endphp
-                                                <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
+                                                @if(auth()->user()?->role?->slug === 'employee')
+                                                    <a href="{{ route('employee.attendance.self', ['month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
+                                                @else
+                                                    <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
+                                                @endif
                                             @endforeach
                                         @else
                                             None

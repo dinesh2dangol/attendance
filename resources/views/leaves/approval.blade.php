@@ -149,7 +149,11 @@
                                 <td>{{ Str::limit($leave->leave_description, 100) }}</td>
                                 <td>
                                     @if($leave->employee && $leave->leave_date)
-                                        <a href="{{ route('employee.attendance', ['employee' => $leave->employee, 'month' => $leave->leave_date->month, 'year' => $leave->leave_date->year]) }}">Attendance</a>
+                                        @if(auth()->user()?->role?->slug === 'employee')
+                                            <a href="{{ route('employee.attendance.self', ['month' => $leave->leave_date->month, 'year' => $leave->leave_date->year]) }}">Attendance</a>
+                                        @else
+                                            <a href="{{ route('employee.attendance', ['employee' => $leave->employee, 'month' => $leave->leave_date->month, 'year' => $leave->leave_date->year]) }}">Attendance</a>
+                                        @endif
                                     @else
                                         —
                                     @endif

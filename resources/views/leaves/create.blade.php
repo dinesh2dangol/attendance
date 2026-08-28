@@ -44,7 +44,8 @@
 
             <div class="field">
                 <label for="leave_date">Date</label>
-                <input id="leave_date" name="leave_date" type="date" value="{{ old('leave_date', request('leave_date')) }}" required />
+                <input id="leave_date" name="leave_date" type="date" value="{{ old('leave_date', request('leave_date')) }}" required
+                    @if(auth()->user()?->role?->slug === 'employee') min="{{ \Carbon\Carbon::now()->format('Y-m-d') }}" @endif />
             </div>
 
             <div class="field">
@@ -64,7 +65,11 @@
 
             <div style="display:flex;gap:0.5rem">
                 <button class="button" type="submit">Save</button>
-                <a href="{{ route('leaves.index') }}" style="align-self:center;">Cancel</a>
+                @if(auth()->user()?->role?->slug === 'employee')
+                    <a href="{{ route('employee.leaves.index') }}" style="align-self:center;">Cancel</a>
+                @else
+                    <a href="{{ route('leaves.index', ['user_id' => request('user_id')]) }}" style="align-self:center;">Cancel</a>
+                @endif
             </div>
         </form>
     </div>

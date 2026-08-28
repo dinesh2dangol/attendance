@@ -155,4 +155,6 @@ Route::middleware(['auth', 'role:employee'])->group(function () {
     Route::get('my-leaves', [LeaveController::class, 'index'])->name('employee.leaves.index');
     Route::get('my-leaves/create', [LeaveController::class, 'create'])->name('employee.leaves.create');
     Route::post('my-leaves', [LeaveController::class, 'store'])->name('employee.leaves.store');
+    Route::get('my-leaves/{leave}/edit', [LeaveController::class, 'edit'])->name('employee.leaves.edit');
+    Route::put('my-leaves/{leave}', [LeaveController::class, 'update'])->name('employee.leaves.update');
 });
