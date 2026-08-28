@@ -23,6 +23,10 @@ Route::get('/', function () {
 Route::middleware('guest')->group(function () {
     Route::view('login', 'auth.login')->name('login');
 
+    // Google OAuth (using league/oauth2-google)
+    Route::get('auth/google', [\App\Http\Controllers\Auth\GoogleOAuthController::class, 'redirect'])->name('auth.google');
+    Route::get('auth/google/callback', [\App\Http\Controllers\Auth\GoogleOAuthController::class, 'callback'])->name('auth.google.callback');
+
     Route::post('login', function (Request $request) {
         $credentials = $request->validate([
             'email' => ['required', 'email'],

@@ -50,6 +50,14 @@
             <button type="submit">Log in</button>
         </form>
 
+        <div style="margin-top:1rem; text-align:center;">
+            <p class="small">Or sign in with</p>
+            <a href="{{ route('auth.google') }}" style="display:inline-flex; align-items:center; gap:0.5rem; padding:0.6rem 0.9rem; border-radius:0.5rem; border:1px solid #d1d5db; text-decoration:none; color:#111827; margin-top:0.5rem;">
+                <img src="https://www.gstatic.com/devrel-devsite/prod/vc3e1c3e0b9bd0b0f2b5f5b3b7a6d2c3f2e8c1e6a9f1a9d6b3f7c6f3b3a1e2f9/cloud/google.svg" alt="Google" style="width:18px; height:18px;"/>
+                <span>Google</span>
+            </a>
+        </div>
+
     </div>
 </body>
 </html>
