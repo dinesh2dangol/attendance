@@ -30,6 +30,9 @@ class DashboardController extends Controller
         $gender = $request->query('gender');
         $department = $request->query('department');
         $status = $request->query('status');
+        $perPage = in_array((int) $request->query('per_page', 10), [10, 25, 50, 100], true)
+            ? (int) $request->query('per_page', 10)
+            : 10;
 
         $query = Employee::orderBy('employee_name');
 
@@ -49,7 +52,7 @@ class DashboardController extends Controller
             $query->where('status', $status);
         }
 
-        $employees = $query->with('department')->paginate(10)->withQueryString();
+        $employees = $query->with('department')->paginate($perPage)->withQueryString();
         $currentYear = Carbon::now()->year;
 
         $joinDatesByUser = $employees->getCollection()
@@ -108,6 +111,7 @@ class DashboardController extends Controller
             'status',
             'gender',
             'search',
+            'perPage',
             'absentDatesByUser',
             'leaveDatesByUser'
         ));

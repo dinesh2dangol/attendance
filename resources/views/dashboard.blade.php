@@ -98,6 +98,23 @@
         .pagination .w-5,
         .pagination .h-5 { width: 1.25rem; height: 1.25rem; }
         .pagination svg { display: inline-block; vertical-align: middle; }
+        .page-size-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        .page-size-wrap label {
+            font-size: 0.9rem;
+            color: #374151;
+        }
+        .page-size-wrap select {
+            padding: 0.55rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            background: #f9fafb;
+        }
 
         @media (max-width: 768px) {
             body { margin: 0; }
@@ -359,6 +376,26 @@
                             </div>
                         </div>
                     @endforeach
+                </div>
+
+                <div class="page-size-wrap">
+                    <form method="GET" action="{{ route('dashboard') }}">
+                        @foreach (request()->except('per_page') as $key => $value)
+                            @if (is_array($value))
+                                @foreach ($value as $subValue)
+                                    <input type="hidden" name="{{ $key }}[]" value="{{ $subValue }}">
+                                @endforeach
+                            @else
+                                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                            @endif
+                        @endforeach
+                        <label for="per_page">Rows per page</label>
+                        <select id="per_page" name="per_page" onchange="this.form.submit()">
+                            @foreach ([10, 25, 50, 100] as $size)
+                                <option value="{{ $size }}" {{ (int) ($perPage ?? 10) === $size ? 'selected' : '' }}>{{ $size }}</option>
+                            @endforeach
+                        </select>
+                    </form>
                 </div>
 
                 <div class="pagination">
