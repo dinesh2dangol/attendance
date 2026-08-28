@@ -26,6 +26,61 @@
         .pagination .w-5,
         .pagination .h-5 { width: 1.25rem; height: 1.25rem; }
         .pagination svg { display: inline-block; vertical-align: middle; }
+
+        @media (max-width: 768px) {
+            body { margin: 0; }
+            .container {
+                max-width: 100%;
+                margin: 1rem;
+                padding: 1rem;
+            }
+            .toolbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .filters {
+                grid-template-columns: 1fr;
+            }
+            .actions {
+                width: 100%;
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.75rem;
+            }
+            .button,
+            .button-secondary {
+                width: 100%;
+                justify-content: center;
+                text-align: center;
+            }
+            .table-wrap {
+                margin: 0 -0.25rem;
+            }
+            th, td {
+                padding: 0.65rem 0.5rem;
+                font-size: 0.9rem;
+            }
+            td[colspan="8"] {
+                line-height: 1.6;
+            }
+            td[colspan="8"] a {
+                display: inline-block;
+                margin-bottom: 0.15rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                margin: 0.75rem;
+                padding: 0.75rem;
+            }
+            .actions {
+                grid-template-columns: 1fr;
+            }
+            .toolbar h1 {
+                font-size: 1.5rem;
+            }
+        }
     </style>
 </head>
 <body>
