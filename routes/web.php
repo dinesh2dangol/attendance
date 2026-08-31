@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeePortalController;
@@ -64,8 +65,9 @@ Route::get('dashboard', [DashboardController::class, 'index'])
     ->name('dashboard');
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('employee-accounts', [EmployeeAccountController::class, 'index'])->name('employee-accounts.index');
-    Route::post('employee-accounts/{employee}', [EmployeeAccountController::class, 'store'])->name('employee-accounts.store');
+    // Employee account management temporarily disabled
+    // Route::get('employee-accounts', [EmployeeAccountController::class, 'index'])->name('employee-accounts.index');
+    // Route::post('employee-accounts/{employee}', [EmployeeAccountController::class, 'store'])->name('employee-accounts.store');
 });
 
 Route::get('employees/{employee}/edit', function (App\Models\Employee $employee) {
@@ -79,7 +81,6 @@ Route::put('employees/{employee}', function (App\Models\Employee $employee, Requ
         'employee_name' => ['required', 'string', 'max:50'],
         'account_email' => ['nullable', 'email', 'max:255', 'unique:users,email,' . $employee->account?->id],
         'account_password' => [
-            Rule::requiredIf(! $employee->account && $request->filled('account_email')),
             'nullable',
             'string',
             'min:8',
@@ -96,7 +97,11 @@ Route::put('employees/{employee}', function (App\Models\Employee $employee, Requ
 
     $employee->update($validated);
 
-    if ($request->filled('account_email')) {
+    if ($request->boolean('remove_account')) {
+        if ($employee->account) {
+            $employee->account->delete();
+        }
+    } elseif ($request->filled('account_email')) {
         $account = $employee->account ?: new User(['employee_id' => $employee->id]);
         $account->name = $employee->employee_name;
         $account->email = $validated['account_email'];
@@ -104,6 +109,9 @@ Route::put('employees/{employee}', function (App\Models\Employee $employee, Requ
 
         if ($request->filled('account_password')) {
             $account->password = Hash::make($validated['account_password']);
+        } elseif (! $employee->account) {
+            // No password provided when creating a new account: generate a random one
+            $account->password = Hash::make(Str::random(24));
         }
 
         $account->save();

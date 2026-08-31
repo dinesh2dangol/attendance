@@ -191,7 +191,7 @@
             </form>
         </div>
 
-        <p><a class="button button-secondary" href="{{ route('employee-accounts.index') }}">Manage Employee Logins</a></p>
+        {{-- Manage Employee Logins disabled temporarily --}}
 
         <section>
             <form method="GET" action="{{ route('dashboard') }}" class="filters">

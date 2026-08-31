@@ -44,6 +44,6 @@ class Employee extends Model
 
     public function account()
     {
-        return $this->hasOne(User::class);
+        return $this->hasOne(User::class, 'employee_id', 'id');
     }
 }

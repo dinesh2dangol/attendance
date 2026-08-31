@@ -26,6 +26,13 @@
         <h1>Edit Employee</h1>
         <p>Update details for {{ $employee->employee_name }}</p>
 
+        @if(request()->query('debug_account'))
+            <div style="background:#fff7ed;border:1px solid #fcd34d;padding:1rem;border-radius:0.5rem;margin-bottom:1rem;">
+                <strong>DEBUG: employee->account</strong>
+                <pre style="overflow:auto;white-space:pre-wrap;">{!! var_export($employee->account, true) !!}</pre>
+            </div>
+        @endif
+
         @if ($errors->any())
             <div class="errors">
                 <ul>
@@ -40,9 +47,13 @@
             <div class="success">{{ session('success') }}</div>
         @endif
 
-        <form method="POST" action="{{ route('employees.update', $employee) }}">
+        <form method="POST" action="{{ route('employees.update', $employee) }}" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
             @csrf
             @method('PUT')
+
+            {{-- Hidden fake fields to discourage browser autofill/autocomplete --}}
+            <input type="text" name="__fake_username" autocomplete="username" style="display:none" />
+            <input type="password" name="__fake_password" autocomplete="new-password" style="display:none" />
 
             <label>
                 Name
@@ -51,13 +62,24 @@
 
             <label>
                 Employee Login Email
-                <input type="email" name="account_email" value="{{ old('account_email', $employee->account?->email) }}" />
+                @if($employee->account)
+                    <input type="email" name="account_email" value="{{ old('account_email', $employee->account->email) }}" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
+                @else
+                    <input type="email" name="account_email" value="" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
+                @endif
             </label>
 
+            @if($employee->account)
             <label>
-                Employee Login Password
-                <input type="password" name="account_password" minlength="8" placeholder="Leave blank to keep current password" />
+                Remove login email
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <input type="checkbox" name="remove_account" value="1" />
+                    <small style="color:#64748b;">Check to remove the associated login account (will delete the user record)</small>
+                </div>
             </label>
+            @endif
+
+            {{-- Passwords are managed via Google OAuth; no password field here. --}}
 
             <label>
                 Join Date (ENG)
