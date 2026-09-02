@@ -34,7 +34,7 @@ class DashboardController extends Controller
             ? (int) $request->query('per_page', 10)
             : 10;
 
-        $query = Employee::orderBy('employee_name');
+        $query = Employee::orderBy('employee_name')->whereHas('department');
 
         if ($search) {
             $query->where('employee_name', 'like', "%{$search}%");
