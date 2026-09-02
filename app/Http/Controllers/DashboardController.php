@@ -30,9 +30,9 @@ class DashboardController extends Controller
         $gender = $request->query('gender');
         $department = $request->query('department');
         $status = $request->query('status');
-        $perPage = in_array((int) $request->query('per_page', 10), [10, 25, 50, 100], true)
-            ? (int) $request->query('per_page', 10)
-            : 10;
+        $perPage = in_array((int) $request->query('per_page', 25), [10, 25, 50, 100], true)
+            ? (int) $request->query('per_page', 25)
+            : 25;
 
         $query = Employee::orderBy('employee_name')->whereHas('department');
 
