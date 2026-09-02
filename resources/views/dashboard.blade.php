@@ -210,7 +210,7 @@
                 </div>
                 <div class="field-group">
                     <label for="department">Department</label>
-                    <select id="department" name="department">
+                    <select id="department" name="department" onchange="this.form.submit()">
                         <option value="">All</option>
                         @foreach ($departments as $dept)
                             <option value="{{ $dept->department_id }}" 
