@@ -33,9 +33,14 @@
                     <a href="{{ route('employee.attendance.self') }}" class="button button-secondary">My Attendance</a>
                     <a href="{{ route('employee.leaves.create') }}" class="button">Apply Leave</a>
                 @else
-                    <a href="{{ route('dashboard') }}" class="button button-secondary">Back to Dashboard</a>
-                    <a href="{{ route('leaves.approval', ['user_id' => request('user_id')]) }}" class="button button-secondary">Approval</a>
-                    <a href="{{ route('leaves.create', ['user_id' => request('user_id')]) }}" class="button">Add Leave</a>
+                    @if(request()->query('back'))
+                        @php parse_str(request()->query('back'), $backParams); @endphp
+                        <a href="{{ route('dashboard', $backParams) }}" class="button button-secondary">Dashboard</a>
+                    @else
+                        <a href="{{ route('dashboard') }}" class="button button-secondary">Dashboard</a>
+                    @endif
+                    <a href="{{ route('leaves.approval', array_merge(['user_id' => request('user_id')], request()->has('back') ? ['back' => request()->query('back')] : [])) }}" class="button button-secondary">Approval</a>
+                    <a href="{{ route('leaves.create', array_merge(['user_id' => request('user_id')], request()->has('back') ? ['back' => request()->query('back')] : [])) }}" class="button">Add Leave</a>
                 @endif
             </div>
         </div>

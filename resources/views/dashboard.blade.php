@@ -268,12 +268,12 @@
                                             @if(auth()->user()?->role?->slug === 'employee')
                                                 <a href="{{ route('employee.attendance.self') }}">Attendance</a>
                                             @else
-                                                <a href="{{ route('employee.attendance', $employee) }}">Attendance</a>
+                                                <a href="{{ route('employee.attendance', array_merge(['employee' => $employee], ['back' => request()->getQueryString()])) }}">Attendance</a>
                                             @endif
                                             |
-                                            <a href="{{ route('employees.edit', $employee) }}">Edit</a>
+                                            <a href="{{ route('employees.edit', array_merge(['employee' => $employee], ['back' => request()->getQueryString()])) }}">Edit</a>
                                             |
-                                            <a href="{{ route('leaves.index', ['user_id' => $employee->user_id]) }}">Leaves</a>
+                                            <a href="{{ route('leaves.index', array_merge(['user_id' => $employee->user_id], ['back' => request()->getQueryString()])) }}">Leaves</a>
                                             |
                                         </td>
                                     </tr>
@@ -288,7 +288,7 @@
                                                     @if(auth()->user()?->role?->slug === 'employee')
                                                         <a href="{{ route('employee.attendance.self', ['month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>@if (! $loop->last), @endif
                                                     @else
-                                                        <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>@if (! $loop->last), @endif
+                                                        <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $absentDate->month, 'year' => $absentDate->year], ['back' => request()->getQueryString()])) }}">{{ $date }}</a>@if (! $loop->last), @endif
                                                     @endif
                                                 @endforeach
                                             @else
@@ -304,7 +304,7 @@
                                                     @if(auth()->user()?->role?->slug === 'employee')
                                                         <a href="{{ route('employee.attendance.self', ['month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
                                                     @else
-                                                        <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
+                                                        <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year], ['back' => request()->getQueryString()])) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
                                                     @endif
                                                 @endforeach
                                             @else
@@ -337,9 +337,9 @@
                                             @if(auth()->user()?->role?->slug === 'employee')
                                                 <a class="button button-secondary" href="{{ route('employee.attendance.self') }}">Attendance</a>
                                             @else
-                                                <a class="button button-secondary" href="{{ route('employee.attendance', $employee) }}">Attendance</a>
+                                                <a class="button button-secondary" href="{{ route('employee.attendance', array_merge(['employee' => $employee], ['back' => request()->getQueryString()])) }}">Attendance</a>
                                             @endif
-                                            <a class="button button-secondary" href="{{ route('employees.edit', $employee) }}">Edit</a>
+                                            <a class="button button-secondary" href="{{ route('employees.edit', array_merge(['employee' => $employee], ['back' => request()->getQueryString()])) }}">Edit</a>
                                         </div>
                                     </div>
                                     <div class="swipe-detail">
@@ -353,7 +353,7 @@
                                                     @if(auth()->user()?->role?->slug === 'employee')
                                                         <a href="{{ route('employee.attendance.self', ['month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>
                                                     @else
-                                                        <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>
+                                                        <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $absentDate->month, 'year' => $absentDate->year], ['back' => request()->getQueryString()])) }}">{{ $date }}</a>
                                                     @endif
                                                 @endforeach
 
@@ -364,7 +364,7 @@
                                                     @if(auth()->user()?->role?->slug === 'employee')
                                                         <a href="{{ route('employee.attendance.self', ['month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>
                                                     @else
-                                                        <a href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>
+                                                        <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year], ['back' => request()->getQueryString()])) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>
                                                     @endif
                                                 @endforeach
                                             </div>

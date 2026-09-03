@@ -68,7 +68,12 @@
                 @if(auth()->user()?->role?->slug === 'employee')
                     <a href="{{ route('employee.leaves.index') }}" style="align-self:center;">Cancel</a>
                 @else
-                    <a href="{{ route('leaves.index', ['user_id' => $leave->user_id]) }}" style="align-self:center;">Cancel</a>
+                    @if(request()->query('back'))
+                        @php parse_str(request()->query('back'), $backParams); @endphp
+                        <a href="{{ route('leaves.index', array_merge(['user_id' => $leave->user_id], $backParams)) }}" style="align-self:center;">Cancel</a>
+                    @else
+                        <a href="{{ route('leaves.index', ['user_id' => $leave->user_id]) }}" style="align-self:center;">Cancel</a>
+                    @endif
                 @endif
             </div>
         </form>

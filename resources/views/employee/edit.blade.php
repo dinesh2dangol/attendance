@@ -51,6 +51,8 @@
             @csrf
             @method('PUT')
 
+            <input type="hidden" name="back" value="{{ request('back') }}" />
+
             {{-- Hidden fake fields to discourage browser autofill/autocomplete --}}
             <input type="text" name="__fake_username" autocomplete="username" style="display:none" />
             <input type="password" name="__fake_password" autocomplete="new-password" style="display:none" />
@@ -142,7 +144,12 @@
 
             <div class="actions">
                 <button class="button" type="submit">Save changes</button>
-                <a class="button-secondary" href="{{ route('dashboard') }}">Cancel</a>
+                @if(request()->query('back'))
+                    @php parse_str(request()->query('back'), $backParams); @endphp
+                    <a class="button-secondary" href="{{ route('dashboard', $backParams) }}">Cancel</a>
+                @else
+                    <a class="button-secondary" href="{{ route('dashboard') }}">Cancel</a>
+                @endif
             </div>
         </form>
     </div>

@@ -75,6 +75,14 @@
                 @if (auth()->user()->role?->slug === 'employee')
                     <a class="button button-secondary" href="{{ route('employee.leaves.index') }}">My Leaves</a>
                 @endif
+                @if (auth()->user()?->role?->slug !== 'employee')
+                    @if(request()->query('back'))
+                        @php parse_str(request()->query('back'), $backParams); @endphp
+                        <a class="button button-secondary" href="{{ route('dashboard', $backParams) }}">Dashboard</a>
+                    @else
+                        <a class="button button-secondary" href="{{ route('dashboard') }}">Dashboard</a>
+                    @endif
+                @endif
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button class="button button-secondary" type="submit">Log out</button>
@@ -174,8 +182,9 @@
                                     <div class="attendance-details">
                                         <div><span>Date:</span> {{ $day->format('Y-m-d') }}</div>
                                     </div>
-                                    @if (auth()->user()->role?->slug === 'admin')
-                                        <a class="button button-secondary" href="{{ route('leaves.create', ['user_id' => $employee->user_id, 'leave_date' => $day->format('Y-m-d')]) }}" style="font-size: 0.75rem; padding: 0.5rem 0.7rem; margin-top: 0.15rem;">Add Leave</a>
+                                        @if (auth()->user()->role?->slug === 'admin')
+                                        @php $leaveParams = ['user_id' => $employee->user_id, 'leave_date' => $day->format('Y-m-d')]; if(request()->query('back')) { $leaveParams = array_merge($leaveParams, ['back' => request()->query('back')]); } @endphp
+                                        <a class="button button-secondary" href="{{ route('leaves.create', $leaveParams) }}" style="font-size: 0.75rem; padding: 0.5rem 0.7rem; margin-top: 0.15rem;">Add Leave</a>
                                         <a class="button button-secondary" href="{{ route('manual-attendance.create', ['user_id' => $employee->user_id, 'timestamp' => $day->format('Y-m-d') . 'T09:00']) }}" style="font-size: 0.75rem; padding: 0.5rem 0.7rem; margin-top: 0.15rem;">Add Manual Attendance</a>
                                     @endif
                                 @elseif(data_get($record, 'attendance_status') === 'Leave')

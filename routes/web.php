@@ -117,6 +117,14 @@ Route::put('employees/{employee}', function (App\Models\Employee $employee, Requ
         $account->save();
     }
 
+    $back = $request->input('back');
+    if ($back) {
+        parse_str($back, $backParams);
+        if (is_array($backParams) && count($backParams) > 0) {
+            return redirect()->route('dashboard', $backParams)->with('success', 'Employee updated successfully.');
+        }
+    }
+
     return redirect()->route('dashboard')->with('success', 'Employee updated successfully.');
 })->middleware(['auth', 'role:admin'])->name('employees.update');
 
