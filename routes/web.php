@@ -130,12 +130,18 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
 
     $attendances = DB::table('daily_attendance_step3')
         ->where('user_id', $employee->user_id)
+        ->when($employee->join_date_eng, function ($q) use ($employee) {
+            return $q->whereDate('attendance_date', '>=', Carbon::parse($employee->join_date_eng)->toDateString());
+        })
         ->whereBetween('attendance_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
         ->orderBy('attendance_date')
         ->get();
 
     $leavesByDate = DB::table('leaves')
         ->where('user_id', $employee->user_id)
+        ->when($employee->join_date_eng, function ($q) use ($employee) {
+            return $q->whereDate('leave_date', '>=', Carbon::parse($employee->join_date_eng)->toDateString());
+        })
         ->whereBetween('leave_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
         ->get()
         ->keyBy(fn ($leave) => Carbon::parse($leave->leave_date)->format('Y-m-d'));

@@ -182,9 +182,14 @@ class LeaveController extends Controller
 
         $absentCount = DB::table('daily_attendance_step3')
             ->when($userId, fn($q) => $q->where('user_id', $userId))
+            ->join('employees', 'employees.user_id', '=', 'daily_attendance_step3.user_id')
             ->whereYear('attendance_date', $year)
             ->whereMonth('attendance_date', $month)
             ->where('attendance_status', 'Absent')
+            ->where(function ($q) {
+                $q->whereNull('employees.join_date_eng')
+                  ->orWhereColumn('attendance_date', '>=', 'employees.join_date_eng');
+            })
             ->count();
 
         $totalLeaves = Leave::when($userId, fn($q) => $q->where('user_id', $userId))
