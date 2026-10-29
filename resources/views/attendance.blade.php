@@ -21,7 +21,8 @@
         .yearly-summary { display: flex; flex-wrap: wrap; gap: 1rem 2rem; margin-bottom: 1.25rem; padding: 1rem 1.25rem; border: 1px solid #e2e8f0; border-radius: 0.85rem; background: #f8fafc; }
         .yearly-summary p { margin: 0; color: #334155; }
         .yearly-summary strong { color: #0f172a; }
-        .yearly-summary > div { flex-basis: 100%; }
+        .yearly-summary > details { flex-basis: 100%; }
+        .yearly-summary summary { cursor: pointer; color: #0f172a; }
         .summary-extra-dates { display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; margin-top: 0.4rem; }
         .summary-extra-dates a { color: #1d4ed8; text-decoration: none; }
         .calendar-card { border: 1px solid #e2e8f0; border-radius: 1rem; overflow: hidden; background: #ffffff; box-shadow: 0 0 0 1px rgba(203, 213, 225, 0.35); }
@@ -146,8 +147,8 @@
                         'Leave Dates' => $yearlyLeaveDates,
                         'Extra Dates' => $yearlyExtraDates,
                     ] as $label => $dates)
-                        <div>
-                            <p><strong>{{ $label }}:</strong></p>
+                        <details>
+                            <summary><strong>{{ $label }}:</strong> {{ count($dates) }}</summary>
                             @if (!empty($dates))
                                 <div class="summary-extra-dates">
                                     @foreach ($dates as $item)
@@ -169,7 +170,7 @@
                             @else
                                 <p>None</p>
                             @endif
-                        </div>
+                        </details>
                     @endforeach
                 </div>
 
