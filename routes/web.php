@@ -16,6 +16,7 @@ use App\Http\Controllers\EmployeePortalController;
 use App\Http\Controllers\EmployeeAccountController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\ManualAttendanceController;
+use App\Support\HolidayCalendar;
 use App\Support\ManualAttendanceCategories;
 
 Route::get('/', function () {
@@ -159,6 +160,7 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
         $monthStart,
         $monthEnd
     );
+    $holidaysByDate = HolidayCalendar::byDate($employee, $monthStart, $monthEnd);
 
     return view('attendance', compact(
         'employee',
@@ -166,6 +168,7 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
         'leavesByDate',
         'monthStart',
         'monthEnd',
+        'holidaysByDate',
         'manualAttendanceByDate'
     ));
 })->middleware(['auth', 'role:admin'])->name('employee.attendance');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Support\HolidayCalendar;
 use App\Support\ManualAttendanceCategories;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -40,6 +41,7 @@ class EmployeePortalController extends Controller
             $monthStart,
             $monthEnd
         );
+        $holidaysByDate = HolidayCalendar::byDate($employee, $monthStart, $monthEnd);
 
         $yearlyAttendanceQuery = DB::table('daily_attendance_step3')
             ->where('user_id', $employee->user_id)
@@ -103,6 +105,7 @@ class EmployeePortalController extends Controller
             'leavesByDate',
             'monthStart',
             'monthEnd',
+            'holidaysByDate',
             'manualAttendanceByDate',
             'year',
             'totalYearlyAttendance',

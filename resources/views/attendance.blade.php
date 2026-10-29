@@ -171,13 +171,17 @@
                         $dateKey = $day->format('Y-m-d');
                         $dayRecords = $isCurrentMonth ? $attendances->filter(fn($row) => data_get($row, 'attendance_date') === $dateKey) : collect();
                         $leave = $isCurrentMonth ? $leavesByDate->get($dateKey) : null;
+                        $holiday = $isCurrentMonth ? $holidaysByDate->get($dateKey) : null;
                         $isManualAttendance = $isCurrentMonth && $manualAttendanceByDate->has($dateKey);
                         $manualCategory = $isManualAttendance ? $manualAttendanceByDate->get($dateKey) : null;
                     @endphp
                     <div class="calendar-day{{ $isCurrentMonth ? '' : ' other-month' }}">
                         <div class="calendar-day-week">{{ $day->format('D') }}</div>
                         <div class="calendar-day-date">{{ $day->format('j') }}</div>
-                            @if ($leave)
+                            @if ($holiday)
+                                <span class="attendance-chip weekend">Holiday</span>
+                                <div>{{ $holiday->holiday_name ?? '-' }}</div>
+                            @elseif ($leave)
                                 <span class="attendance-chip absent">LEAVE{{ (int) $leave->approval_status === 0 ? ' (P)' : '' }}</span>
                                 <div class="attendance-details">
                                     <div><span>Date:</span> {{ $day->format('Y-m-d') }}</div>
