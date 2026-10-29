@@ -81,6 +81,9 @@
             gap: 0.35rem 0.5rem;
             margin-top: 0.35rem;
         }
+        .date-section { margin: 0.35rem 0; }
+        .date-section summary { cursor: pointer; color: #111827; }
+        .date-section .date-list { margin: 0.35rem 0 0 1rem; }
         .leave-total-list {
             display: flex;
             flex-wrap: wrap;
@@ -292,50 +295,45 @@
                                     </tr>
                                     <tr>
                                         <td colspan="8">
-                                            <strong>Absent Dates:</strong>
-                                            @if (!empty($absentDates))
-                                                @foreach ($absentDates as $date)
-                                                    @php
-                                                        $absentDate = \Carbon\Carbon::parse($date);
-                                                    @endphp
-                                                    @if(auth()->user()?->role?->slug === 'employee')
-                                                        <a href="{{ route('employee.attendance.self', ['month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>@if (! $loop->last), @endif
-                                                    @else
-                                                        <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $absentDate->month, 'year' => $absentDate->year], ['back' => request()->getQueryString()])) }}">{{ $date }}</a>@if (! $loop->last), @endif
-                                                    @endif
-                                                @endforeach
-                                            @else
-                                                None
-                                            @endif
-                                            <br>
-                                            <strong>Leave Dates:</strong>
-                                            @if (!empty($leaveDates))
-                                                @foreach ($leaveDates as $leave)
-                                                    @php
-                                                        $leaveDate = \Carbon\Carbon::parse($leave['date']);
-                                                    @endphp
-                                                    @if(auth()->user()?->role?->slug === 'employee')
-                                                        <a href="{{ route('employee.attendance.self', ['month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['type'] ? ' (' . $leave['type'] . ')' : '' }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
-                                                    @else
-                                                        <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year], ['back' => request()->getQueryString()])) }}">{{ $leave['date'] }}{{ $leave['type'] ? ' (' . $leave['type'] . ')' : '' }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
-                                                    @endif
-                                                @endforeach
-                                            @else
-                                                None
-                                            @endif
-                                            <br>
-                                            <strong>Extra Dates:</strong>
-                                            @if (!empty($extraDates))
-                                                @foreach ($extraDates as $date)
-                                                    @php
-                                                        $extraDate = \Carbon\Carbon::parse($date);
-                                                    @endphp
-                                                    <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $extraDate->month, 'year' => $extraDate->year], ['back' => request()->getQueryString()])) }}">{{ $date }}</a>@if (! $loop->last), @endif
-                                                @endforeach
-                                            @else
-                                                None
-                                            @endif
-                                            <br>
+                                            <details class="date-section">
+                                                <summary><strong>Absent Dates:</strong> {{ $totalAbsentDates }}</summary>
+                                                @if (!empty($absentDates))
+                                                    <div class="date-list">
+                                                        @foreach ($absentDates as $date)
+                                                            @php $absentDate = \Carbon\Carbon::parse($date); @endphp
+                                                            <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $absentDate->month, 'year' => $absentDate->year], ['back' => request()->getQueryString()])) }}">{{ $date }}</a>@if (! $loop->last), @endif
+                                                        @endforeach
+                                                    </div>
+                                                @else
+                                                    <p>None</p>
+                                                @endif
+                                            </details>
+                                            <details class="date-section">
+                                                <summary><strong>Leave Dates:</strong> {{ count($leaveDates) }}</summary>
+                                                @if (!empty($leaveDates))
+                                                    <div class="date-list">
+                                                        @foreach ($leaveDates as $leave)
+                                                            @php $leaveDate = \Carbon\Carbon::parse($leave['date']); @endphp
+                                                            <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year], ['back' => request()->getQueryString()])) }}">{{ $leave['date'] }}{{ $leave['type'] ? ' (' . $leave['type'] . ')' : '' }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
+                                                        @endforeach
+                                                    </div>
+                                                @else
+                                                    <p>None</p>
+                                                @endif
+                                            </details>
+                                            <details class="date-section">
+                                                <summary><strong>Extra Dates:</strong> {{ $totalExtra }}</summary>
+                                                @if (!empty($extraDates))
+                                                    <div class="date-list">
+                                                        @foreach ($extraDates as $date)
+                                                            @php $extraDate = \Carbon\Carbon::parse($date); @endphp
+                                                            <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $extraDate->month, 'year' => $extraDate->year], ['back' => request()->getQueryString()])) }}">{{ $date }}</a>@if (! $loop->last), @endif
+                                                        @endforeach
+                                                    </div>
+                                                @else
+                                                    <p>None</p>
+                                                @endif
+                                            </details>
                                             <strong>Total Extra:</strong> {{ $totalExtra }}<br>
                                             <strong>Total Absent:</strong> {{ $totalAbsentDates }}<br>
                                             @if (!empty($leaveTotals))
@@ -389,46 +387,53 @@
                                     </div>
                                     <div class="swipe-detail">
                                         <span class="detail-label">Absent &amp; Leave</span>
-                                        @if (!empty($absentDates) || !empty($leaveDates))
-                                            <div class="date-list">
-                                                @foreach ($absentDates as $date)
-                                                    @php
-                                                        $absentDate = \Carbon\Carbon::parse($date);
-                                                    @endphp
-                                                    @if(auth()->user()?->role?->slug === 'employee')
-                                                        <a href="{{ route('employee.attendance.self', ['month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>
-                                                    @else
-                                                        <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $absentDate->month, 'year' => $absentDate->year], ['back' => request()->getQueryString()])) }}">{{ $date }}</a>
-                                                    @endif
-                                                @endforeach
-
-                                                @foreach ($leaveDates as $leave)
-                                                    @php
-                                                        $leaveDate = \Carbon\Carbon::parse($leave['date']);
-                                                    @endphp
-                                                    @if(auth()->user()?->role?->slug === 'employee')
-                                                        <a href="{{ route('employee.attendance.self', ['month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['type'] ? ' (' . $leave['type'] . ')' : '' }}{{ $leave['pending'] ? ' (P)' : '' }}</a>
-                                                    @else
-                                                        <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year], ['back' => request()->getQueryString()])) }}">{{ $leave['date'] }}{{ $leave['type'] ? ' (' . $leave['type'] . ')' : '' }}{{ $leave['pending'] ? ' (P)' : '' }}</a>
-                                                    @endif
-                                                @endforeach
-                                            </div>
-                                        @else
-                                            <p>None</p>
-                                        @endif
-                                        <span class="detail-label">Extra Dates</span>
-                                        @if (!empty($extraDates))
-                                            <div class="date-list">
-                                                @foreach ($extraDates as $date)
-                                                    @php
-                                                        $extraDate = \Carbon\Carbon::parse($date);
-                                                    @endphp
-                                                    <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $extraDate->month, 'year' => $extraDate->year], ['back' => request()->getQueryString()])) }}">{{ $date }}</a>
-                                                @endforeach
-                                            </div>
-                                        @else
-                                            <p>None</p>
-                                        @endif
+                                        <details class="date-section">
+                                            <summary><strong>Absent Dates:</strong> {{ $totalAbsentDates }}</summary>
+                                            @if (!empty($absentDates))
+                                                    <div class="date-list">
+                                                        @foreach ($absentDates as $date)
+                                                            @php $absentDate = \Carbon\Carbon::parse($date); @endphp
+                                                            @if(auth()->user()?->role?->slug === 'employee')
+                                                                <a href="{{ route('employee.attendance.self', ['month' => $absentDate->month, 'year' => $absentDate->year]) }}">{{ $date }}</a>
+                                                            @else
+                                                                <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $absentDate->month, 'year' => $absentDate->year], ['back' => request()->getQueryString()])) }}">{{ $date }}</a>
+                                                            @endif
+                                                        @endforeach
+                                                    </div>
+                                            @else
+                                                    <p>None</p>
+                                            @endif
+                                        </details>
+                                        <details class="date-section">
+                                            <summary><strong>Leave Dates:</strong> {{ count($leaveDates) }}</summary>
+                                            @if (!empty($leaveDates))
+                                                    <div class="date-list">
+                                                        @foreach ($leaveDates as $leave)
+                                                            @php $leaveDate = \Carbon\Carbon::parse($leave['date']); @endphp
+                                                            @if(auth()->user()?->role?->slug === 'employee')
+                                                                <a href="{{ route('employee.attendance.self', ['month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['type'] ? ' (' . $leave['type'] . ')' : '' }}{{ $leave['pending'] ? ' (P)' : '' }}</a>
+                                                            @else
+                                                                <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year], ['back' => request()->getQueryString()])) }}">{{ $leave['date'] }}{{ $leave['type'] ? ' (' . $leave['type'] . ')' : '' }}{{ $leave['pending'] ? ' (P)' : '' }}</a>
+                                                            @endif
+                                                        @endforeach
+                                                    </div>
+                                            @else
+                                                    <p>None</p>
+                                            @endif
+                                        </details>
+                                        <details class="date-section">
+                                            <summary><strong>Extra Dates:</strong> {{ $totalExtra }}</summary>
+                                            @if (!empty($extraDates))
+                                                    <div class="date-list">
+                                                        @foreach ($extraDates as $date)
+                                                            @php $extraDate = \Carbon\Carbon::parse($date); @endphp
+                                                            <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $extraDate->month, 'year' => $extraDate->year], ['back' => request()->getQueryString()])) }}">{{ $date }}</a>
+                                                        @endforeach
+                                                    </div>
+                                            @else
+                                                <p>None</p>
+                                            @endif
+                                        </details>
                                         <span class="detail-label">Total Absent Dates</span>
                                         <p>{{ $totalAbsentDates }}</p>
                                         <span class="detail-label">Total Extra</span>
