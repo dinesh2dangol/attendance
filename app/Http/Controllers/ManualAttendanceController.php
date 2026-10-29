@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Support\ManualAttendanceCategories;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 
 class ManualAttendanceController extends Controller
 {
@@ -17,6 +19,7 @@ class ManualAttendanceController extends Controller
             'employees' => $employees,
             'selectedUserId' => $request->query('user_id'),
             'selectedTimestamp' => $request->query('timestamp'),
+            'reasons' => ManualAttendanceCategories::REASONS,
         ]);
     }
 
@@ -28,6 +31,7 @@ class ManualAttendanceController extends Controller
             'user_id' => ['required', 'string', 'exists:employees,user_id'],
             'attendance_date' => ['required', 'date'],
             'status' => ['required', 'integer', 'in:0,1'],
+            'reason' => ['required', 'string', Rule::in(ManualAttendanceCategories::REASONS)],
             'remarks' => ['nullable', 'string'],
         ];
 
@@ -37,6 +41,10 @@ class ManualAttendanceController extends Controller
         }
 
         $validated = $request->validate($rules);
+        $remarks = ManualAttendanceCategories::formatRemarks(
+            $validated['reason'],
+            $validated['remarks'] ?? null
+        );
 
         if ($status === 1) {
             $punchTypes = ['IN', 'OUT', 'LUNCH_IN', 'LUNCH_OUT'];
@@ -54,7 +62,7 @@ class ManualAttendanceController extends Controller
                     'timestamp' => $validated['attendance_date'] . ' ' . $value . ':00',
                     'status' => 1,
                     'punch_type' => $punchType,
-                    'remarks' => $validated['remarks'] ?? null,
+                    'remarks' => $remarks,
                 ];
             }
 
@@ -71,7 +79,7 @@ class ManualAttendanceController extends Controller
                 'timestamp' => $leaveDate . ' 00:00:00',
                 'status' => 0,
                 'punch_type' => 'ABSENT',
-                'remarks' => $validated['remarks'] ?? null,
+                'remarks' => $remarks,
             ]);
 
             DB::table('leaves')->updateOrInsert(

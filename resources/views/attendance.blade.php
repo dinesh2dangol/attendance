@@ -171,6 +171,8 @@
                         $dateKey = $day->format('Y-m-d');
                         $dayRecords = $isCurrentMonth ? $attendances->filter(fn($row) => data_get($row, 'attendance_date') === $dateKey) : collect();
                         $leave = $isCurrentMonth ? $leavesByDate->get($dateKey) : null;
+                        $isManualAttendance = $isCurrentMonth && $manualAttendanceByDate->has($dateKey);
+                        $manualCategory = $isManualAttendance ? $manualAttendanceByDate->get($dateKey) : null;
                     @endphp
                     <div class="calendar-day{{ $isCurrentMonth ? '' : ' other-month' }}">
                         <div class="calendar-day-week">{{ $day->format('D') }}</div>
@@ -181,6 +183,9 @@
                                     <div><span>Date:</span> {{ $day->format('Y-m-d') }}</div>
                                     <div>{{ $leave->leave_type ?? '-' }}</div>
                                     <div>{{ (int) $leave->approval_status === 1 ? 'Approved' : 'Pending' }}</div>
+                                    @if ($isManualAttendance)
+                                        <div><span>Category:</span> {{ $manualCategory ?? 'Not specified' }}</div>
+                                    @endif
                                 </div>
                             @else
                             @forelse ($dayRecords as $record)
@@ -193,6 +198,9 @@
                                     <span class="attendance-chip absent">Absent</span>
                                     <div class="attendance-details">
                                         <div><span>Date:</span> {{ $day->format('Y-m-d') }}</div>
+                                        @if ($isManualAttendance)
+                                            <div><span>Category:</span> {{ $manualCategory ?? 'Not specified' }}</div>
+                                        @endif
                                     </div>
                                         @if (auth()->user()->role?->slug === 'admin')
                                         @php $leaveParams = ['user_id' => $employee->user_id, 'leave_date' => $day->format('Y-m-d')]; if(request()->query('back')) { $leaveParams = array_merge($leaveParams, ['back' => request()->query('back')]); } @endphp
@@ -207,6 +215,9 @@
                                     <div><span>Date:</span> {{ $day->format('Y-m-d') }}</div>
                                     <div>{{ data_get($record, 'leave_type') ?? '-' }}</div>
                                     <div>{{ data_get($record, 'approval_status') == 1 ? 'Approved' : 'Pending' }}</div>
+                                    @if ($isManualAttendance)
+                                        <div><span>Category:</span> {{ $manualCategory ?? 'Not specified' }}</div>
+                                    @endif
                                 </div>
                                 @else
                                 <span class="attendance-chip {{ Str::slug(data_get($record, 'attendance_status', 'present')) }}">
@@ -215,9 +226,10 @@
                                 <div class="attendance-details">
                                     <div><span>In:</span> {{ data_get($record, 'first_punch') ?? '-' }}</div>
                                     <div><span>Out:</span> {{ data_get($record, 'last_punch') ?? '-' }}</div>
+                                    @if ($isManualAttendance)
+                                        <div><span>Category:</span> {{ $manualCategory ?? 'Not specified' }}</div>
+                                    @else
                                     <hr color="lightgray" />
-                                    <!-- <div><span>Lunch Out:</span> {{ data_get($record, 'lunch_out') ?? '-' }}</div>
-                                    <div><span>Lunch In:</span> {{ data_get($record, 'lunch_in') ?? '-' }}</div> -->
                                     @php
                                         $p1 = data_get($record, 'punch_1');
                                         $p2 = data_get($record, 'punch_2');
@@ -236,7 +248,7 @@
                                     <span class="attendance-chip {{ Str::slug(data_get($record, 'attendance_status', 'present')) }}">
                                         {{ data_get($record, 'lunch_hour') ?? '-' }}
                                     </span>
-                                    <!-- <div><span>Lunch Hour:</span> {{ data_get($record, 'lunch_hour') ?? '-' }}</div> -->
+                                    @endif
                                 </div>
                                 @endif
                             @empty

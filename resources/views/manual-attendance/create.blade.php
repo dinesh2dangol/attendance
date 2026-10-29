@@ -74,7 +74,17 @@
             </div>
 
             <div class="field">
-                <label for="remarks">Remarks</label>
+                <label for="reason">Reason</label>
+                <select id="reason" name="reason" required>
+                    <option value="">-- Select reason --</option>
+                    @foreach ($reasons as $reason)
+                        <option value="{{ $reason }}" {{ old('reason') === $reason ? 'selected' : '' }}>{{ $reason }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="remarks">Additional Remarks (optional)</label>
                 <textarea id="remarks" name="remarks" rows="4">{{ old('remarks') }}</textarea>
             </div>
 

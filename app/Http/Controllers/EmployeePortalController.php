@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Support\ManualAttendanceCategories;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +35,11 @@ class EmployeePortalController extends Controller
             ->whereBetween('leave_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
             ->get()
             ->keyBy(fn ($leave) => Carbon::parse($leave->leave_date)->format('Y-m-d'));
+        $manualAttendanceByDate = ManualAttendanceCategories::byDate(
+            $employee->user_id,
+            $monthStart,
+            $monthEnd
+        );
 
         $yearlyAttendanceQuery = DB::table('daily_attendance_step3')
             ->where('user_id', $employee->user_id)
@@ -97,6 +103,7 @@ class EmployeePortalController extends Controller
             'leavesByDate',
             'monthStart',
             'monthEnd',
+            'manualAttendanceByDate',
             'year',
             'totalYearlyAttendance',
             'totalYearlyAbsent',

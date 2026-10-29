@@ -16,6 +16,7 @@ use App\Http\Controllers\EmployeePortalController;
 use App\Http\Controllers\EmployeeAccountController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\ManualAttendanceController;
+use App\Support\ManualAttendanceCategories;
 
 Route::get('/', function () {
     return view('welcome');
@@ -153,8 +154,20 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
         ->whereBetween('leave_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
         ->get()
         ->keyBy(fn ($leave) => Carbon::parse($leave->leave_date)->format('Y-m-d'));
+    $manualAttendanceByDate = ManualAttendanceCategories::byDate(
+        $employee->user_id,
+        $monthStart,
+        $monthEnd
+    );
 
-    return view('attendance', compact('employee', 'attendances', 'leavesByDate', 'monthStart', 'monthEnd'));
+    return view('attendance', compact(
+        'employee',
+        'attendances',
+        'leavesByDate',
+        'monthStart',
+        'monthEnd',
+        'manualAttendanceByDate'
+    ));
 })->middleware(['auth', 'role:admin'])->name('employee.attendance');
 
 Route::middleware('auth')->group(function () {
