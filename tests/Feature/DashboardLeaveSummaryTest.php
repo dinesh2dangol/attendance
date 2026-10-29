@@ -9,6 +9,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -18,6 +19,8 @@ class DashboardLeaveSummaryTest extends TestCase
 
     public function test_dashboard_shows_leave_totals_by_category_for_each_employee(): void
     {
+        $leaveYear = now()->year;
+
         Schema::create('daily_attendance_step3', function (Blueprint $table) {
             $table->string('user_id');
             $table->date('attendance_date');
@@ -41,27 +44,45 @@ class DashboardLeaveSummaryTest extends TestCase
             'department_id' => $department->department_id,
         ]);
 
+        DB::table('daily_attendance_step3')->insert([
+            [
+                'user_id' => $employee->user_id,
+                'attendance_date' => "{$leaveYear}-01-10",
+                'attendance_status' => 'Absent',
+            ],
+            [
+                'user_id' => $employee->user_id,
+                'attendance_date' => "{$leaveYear}-01-13",
+                'attendance_status' => 'Absent',
+            ],
+            [
+                'user_id' => $employee->user_id,
+                'attendance_date' => "{$leaveYear}-01-14",
+                'attendance_status' => 'Absent',
+            ],
+        ]);
+
         Leave::create([
             'user_id' => $employee->user_id,
-            'leave_date' => '2025-01-10',
+            'leave_date' => "{$leaveYear}-01-10",
             'leave_type' => 'sick',
             'approval_status' => 0,
         ]);
         Leave::create([
             'user_id' => $employee->user_id,
-            'leave_date' => '2025-01-11',
+            'leave_date' => "{$leaveYear}-01-11",
             'leave_type' => 'sick',
             'approval_status' => 1,
         ]);
         Leave::create([
             'user_id' => $employee->user_id,
-            'leave_date' => '2025-01-12',
+            'leave_date' => "{$leaveYear}-01-12",
             'leave_type' => 'casual',
             'approval_status' => 1,
         ]);
         Leave::create([
             'user_id' => 'EMP-002',
-            'leave_date' => '2025-01-13',
+            'leave_date' => "{$leaveYear}-01-13",
             'leave_type' => 'maternity',
             'approval_status' => 1,
         ]);
@@ -75,7 +96,14 @@ class DashboardLeaveSummaryTest extends TestCase
             ->assertSee('Leave Totals by Category')
             ->assertSee('Sick: 2')
             ->assertSee('Casual: 1')
+            ->assertSee('Total Leaves:</strong> 3')
+            ->assertSee('Total Absent Dates:</strong> 2')
+            ->assertSee('Total Absent Dates</span>')
             ->assertSee('Maternity: 1')
+            ->assertSee('Total Leaves</span>')
+            ->assertSee("{$leaveYear}-01-10 (S) (P)")
+            ->assertSee("{$leaveYear}-01-11 (S)")
+            ->assertSee("{$leaveYear}-01-12 (C)")
             ->assertSee('Second Employee');
     }
 }

@@ -264,6 +264,8 @@
                                         $absentDates = $absentDatesByUser[$employee->user_id] ?? [];
                                         $leaveDates = $leaveDatesByUser[$employee->user_id] ?? [];
                                         $leaveTotals = $leaveTotalsByUser[$employee->user_id] ?? [];
+                                        $totalLeaves = collect($leaveTotals)->sum('total');
+                                        $totalAbsentDates = count($absentDates);
                                     @endphp
                                     <tr>
                                         <td>{{ $employee->id }}</td>
@@ -311,23 +313,28 @@
                                                         $leaveDate = \Carbon\Carbon::parse($leave['date']);
                                                     @endphp
                                                     @if(auth()->user()?->role?->slug === 'employee')
-                                                        <a href="{{ route('employee.attendance.self', ['month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
+                                                        <a href="{{ route('employee.attendance.self', ['month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['type'] ? ' (' . $leave['type'] . ')' : '' }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
                                                     @else
-                                                        <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year], ['back' => request()->getQueryString()])) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
+                                                        <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year], ['back' => request()->getQueryString()])) }}">{{ $leave['date'] }}{{ $leave['type'] ? ' (' . $leave['type'] . ')' : '' }}{{ $leave['pending'] ? ' (P)' : '' }}</a>@if (! $loop->last), @endif
                                                     @endif
                                                 @endforeach
                                             @else
                                                 None
                                             @endif
                                             <br>
-                                            <strong>Leave Totals by Category:</strong>
+                                            <strong>Total Absent:</strong> {{ $totalAbsentDates }}<br>
                                             @if (!empty($leaveTotals))
+                                                <strong>Total Leaves: </strong>{{ $totalLeaves }} (
+                                                
                                                 @foreach ($leaveTotals as $leaveTotal)
                                                     {{ ucfirst($leaveTotal->leave_type) }}: {{ $leaveTotal->total }}@if (! $loop->last), @endif
                                                 @endforeach
+                                                )
+
                                             @else
-                                                None
+                                                <strong>Total Leaves: </strong> 0
                                             @endif
+                                            <br>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -342,6 +349,8 @@
                             $absentDates = $absentDatesByUser[$employee->user_id] ?? [];
                             $leaveDates = $leaveDatesByUser[$employee->user_id] ?? [];
                             $leaveTotals = $leaveTotalsByUser[$employee->user_id] ?? [];
+                            $totalLeaves = collect($leaveTotals)->sum('total');
+                            $totalAbsentDates = count($absentDates);
                         @endphp
                         <div class="mobile-employee-item">
                             <div class="swipe-shell" data-swipe-shell>
@@ -381,25 +390,28 @@
                                                         $leaveDate = \Carbon\Carbon::parse($leave['date']);
                                                     @endphp
                                                     @if(auth()->user()?->role?->slug === 'employee')
-                                                        <a href="{{ route('employee.attendance.self', ['month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>
+                                                        <a href="{{ route('employee.attendance.self', ['month' => $leaveDate->month, 'year' => $leaveDate->year]) }}">{{ $leave['date'] }}{{ $leave['type'] ? ' (' . $leave['type'] . ')' : '' }}{{ $leave['pending'] ? ' (P)' : '' }}</a>
                                                     @else
-                                                        <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year], ['back' => request()->getQueryString()])) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>
+                                                        <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year], ['back' => request()->getQueryString()])) }}">{{ $leave['date'] }}{{ $leave['type'] ? ' (' . $leave['type'] . ')' : '' }}{{ $leave['pending'] ? ' (P)' : '' }}</a>
                                                     @endif
                                                 @endforeach
                                             </div>
                                         @else
                                             <p>None</p>
                                         @endif
-                                        <span class="detail-label">Leave Totals by Category</span>
+                                        <span class="detail-label">Total Absent Dates</span>
+                                        <p>{{ $totalAbsentDates }}</p>
+                                        <span class="detail-label">Leave Totals</span>
                                         @if (!empty($leaveTotals))
                                             <div class="leave-total-list">
+                                                <span>{{ $totalLeaves }}</span>
                                                 @foreach ($leaveTotals as $leaveTotal)
                                                     <span>{{ ucfirst($leaveTotal->leave_type) }}: {{ $leaveTotal->total }}</span>
                                                 @endforeach
                                             </div>
                                         @else
                                             <p>None</p>
-                                        @endif
+                                        @endif                                        
                                     </div>
                                 </div>
                             </div>

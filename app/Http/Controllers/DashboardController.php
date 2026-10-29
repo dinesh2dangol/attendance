@@ -94,7 +94,7 @@ class DashboardController extends Controller
 
         $leaveDatesByUser = DB::table('leaves')
             ->whereYear('leave_date', $currentYear)
-            ->select('user_id', 'leave_date', 'approval_status')
+            ->select('user_id', 'leave_date', 'leave_type', 'approval_status')
             ->orderBy('leave_date')
             ->get()
             ->groupBy('user_id')
@@ -105,6 +105,11 @@ class DashboardController extends Controller
                     ->filter(fn ($row) => ! $joinDate || Carbon::parse($row->leave_date)->greaterThanOrEqualTo($joinDate))
                     ->map(fn ($row) => [
                         'date' => Carbon::parse($row->leave_date)->format('Y-m-d'),
+                        'type' => match (strtolower($row->leave_type)) {
+                            'casual' => 'C',
+                            'sick' => 'S',
+                            default => null,
+                        },
                         'pending' => (int) $row->approval_status === 0,
                     ])
                     ->values()
