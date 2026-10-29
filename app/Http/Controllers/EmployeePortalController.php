@@ -64,6 +64,22 @@ class EmployeePortalController extends Controller
 
         $totalYearlyAttendance = $yearlyAttendanceQuery->distinct()->count('attendance_date');
 
+        $yearlyExtraQuery = DB::table('daily_attendance_step3')
+            ->where('user_id', $employee->user_id)
+            ->whereBetween('attendance_date', [$yearStart, $yearEnd])
+            ->whereIn('attendance_status', ['Present', 'Remote'])
+            ->whereIn('day_type', ['Holiday', 'Weekend']);
+
+        if ($employee->join_date_eng) {
+            $yearlyExtraQuery->whereDate(
+                'attendance_date',
+                '>=',
+                Carbon::parse($employee->join_date_eng)->toDateString()
+            );
+        }
+
+        $totalYearlyExtra = $yearlyExtraQuery->distinct()->count('attendance_date');
+
         $yearlyAbsentQuery = DB::table('daily_attendance_step3')
             ->where('user_id', $employee->user_id)
             ->whereBetween('attendance_date', [$yearStart, $yearEnd])
@@ -109,6 +125,7 @@ class EmployeePortalController extends Controller
             'manualAttendanceByDate',
             'year',
             'totalYearlyAttendance',
+            'totalYearlyExtra',
             'totalYearlyAbsent',
             'totalYearlyLeaves'
         ));

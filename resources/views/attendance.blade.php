@@ -128,6 +128,7 @@
                     <div class="yearly-summary">
                         <p><strong>Yearly Summary ({{ $year }})</strong></p>
                         <p><strong>Total Attendance:</strong> {{ $totalYearlyAttendance }}</p>
+                        <p><strong>Total Extra:</strong> {{ $totalYearlyExtra }}</p>
                         <p><strong>Total Absent:</strong> {{ $totalYearlyAbsent }}</p>
                         <p><strong>Total Leaves:</strong> {{ $totalYearlyLeaves }}</p>
                     </div>
@@ -174,6 +175,10 @@
                         $holiday = $isCurrentMonth ? $holidaysByDate->get($dateKey) : null;
                         $isManualAttendance = $isCurrentMonth && $manualAttendanceByDate->has($dateKey);
                         $manualCategory = $isManualAttendance ? $manualAttendanceByDate->get($dateKey) : null;
+                        $workedOnWeekend = $dayRecords->contains(fn ($record) =>
+                            data_get($record, 'day_type') === 'Weekend'
+                            && in_array(data_get($record, 'attendance_status'), ['Present', 'Remote'], true)
+                        );
                     @endphp
                     <div class="calendar-day{{ $isCurrentMonth ? '' : ' other-month' }}">
                         <div class="calendar-day-week">{{ $day->format('D') }}</div>
@@ -181,6 +186,34 @@
                             @if ($holiday)
                                 <span class="attendance-chip weekend">Holiday</span>
                                 <div>{{ $holiday->holiday_name ?? '-' }}</div>
+                                @foreach ($dayRecords->whereIn('attendance_status', ['Present', 'Remote']) as $record)
+                                    <span class="attendance-chip {{ Str::slug($record->attendance_status) }}">{{ $record->attendance_status }} (Extra)</span>
+                                    <div class="attendance-details">
+                                        <div><span>In:</span> {{ data_get($record, 'first_punch') ?? '-' }}</div>
+                                        <div><span>Out:</span> {{ data_get($record, 'last_punch') ?? '-' }}</div>
+                                        @if ($isManualAttendance)
+                                            <div><span>Category:</span> {{ $manualCategory ?? 'Not specified' }}</div>
+                                        @else
+                                            <div><span>Lunch In:</span> {{ data_get($record, 'lunch_in') ?? '-' }}</div>
+                                            <div><span>Lunch Out:</span> {{ data_get($record, 'lunch_out') ?? '-' }}</div>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            @elseif ($workedOnWeekend)
+                                <span class="attendance-chip weekend">Weekend</span>
+                                @foreach ($dayRecords->where('day_type', 'Weekend')->whereIn('attendance_status', ['Present', 'Remote']) as $record)
+                                    <span class="attendance-chip {{ Str::slug($record->attendance_status) }}">{{ $record->attendance_status }} (Extra)</span>
+                                    <div class="attendance-details">
+                                        <div><span>In:</span> {{ data_get($record, 'first_punch') ?? '-' }}</div>
+                                        <div><span>Out:</span> {{ data_get($record, 'last_punch') ?? '-' }}</div>
+                                        @if ($isManualAttendance)
+                                            <div><span>Category:</span> {{ $manualCategory ?? 'Not specified' }}</div>
+                                        @else
+                                            <div><span>Lunch In:</span> {{ data_get($record, 'lunch_in') ?? '-' }}</div>
+                                            <div><span>Lunch Out:</span> {{ data_get($record, 'lunch_out') ?? '-' }}</div>
+                                        @endif
+                                    </div>
+                                @endforeach
                             @elseif ($leave)
                                 <span class="attendance-chip absent">LEAVE{{ (int) $leave->approval_status === 0 ? ' (P)' : '' }}</span>
                                 <div class="attendance-details">
@@ -195,6 +228,19 @@
                             @forelse ($dayRecords as $record)
                                 @if(data_get($record, 'day_type') === 'Weekend')
                                     <span class="attendance-chip weekend">Weekend</span>
+                                    @if (in_array(data_get($record, 'attendance_status'), ['Present', 'Remote'], true))
+                                        <span class="attendance-chip {{ Str::slug($record->attendance_status) }}">{{ $record->attendance_status }} (Extra)</span>
+                                        <div class="attendance-details">
+                                            <div><span>In:</span> {{ data_get($record, 'first_punch') ?? '-' }}</div>
+                                            <div><span>Out:</span> {{ data_get($record, 'last_punch') ?? '-' }}</div>
+                                            @if ($isManualAttendance)
+                                                <div><span>Category:</span> {{ $manualCategory ?? 'Not specified' }}</div>
+                                            @else
+                                                <div><span>Lunch In:</span> {{ data_get($record, 'lunch_in') ?? '-' }}</div>
+                                                <div><span>Lunch Out:</span> {{ data_get($record, 'lunch_out') ?? '-' }}</div>
+                                            @endif
+                                        </div>
+                                    @endif
                                 @elseif(data_get($record, 'day_type') === 'Holiday')
                                     <span class="attendance-chip weekend">Holiday</span>
                                     <div>{{ data_get($record, 'holiday_name') ?? '-' }}</div>
