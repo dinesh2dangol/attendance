@@ -16,6 +16,7 @@ class ManualAttendanceCategoryTest extends TestCase
         Schema::create('ManualAttendance', function (Blueprint $table) {
             $table->string('user_id');
             $table->dateTime('timestamp');
+            $table->string('category')->nullable();
             $table->text('remarks')->nullable();
         });
 
@@ -23,22 +24,32 @@ class ManualAttendanceCategoryTest extends TestCase
             [
                 'user_id' => 'EMP-001',
                 'timestamp' => '2026-03-17 09:00:00',
-                'remarks' => ManualAttendanceCategories::formatRemarks('WFH', 'Worked from home'),
+                'category' => 'WFH',
+                'remarks' => 'Worked from home',
             ],
             [
                 'user_id' => 'EMP-001',
                 'timestamp' => '2026-03-17 17:00:00',
-                'remarks' => ManualAttendanceCategories::formatRemarks('WFH', 'Worked from home'),
+                'category' => 'WFH',
+                'remarks' => 'Worked from home',
             ],
             [
                 'user_id' => 'EMP-001',
                 'timestamp' => '2026-03-18 09:00:00',
+                'category' => null,
                 'remarks' => 'Legacy manual attendance',
             ],
             [
                 'user_id' => 'EMP-002',
                 'timestamp' => '2026-03-17 09:00:00',
-                'remarks' => ManualAttendanceCategories::formatRemarks('Forgot', null),
+                'category' => 'Forgot',
+                'remarks' => null,
+            ],
+            [
+                'user_id' => 'EMP-001',
+                'timestamp' => '2026-03-19 09:00:00',
+                'category' => null,
+                'remarks' => "Reason: Others\nOld additional note",
             ],
         ]);
 
@@ -51,6 +62,7 @@ class ManualAttendanceCategoryTest extends TestCase
         $this->assertSame('WFH', $categories->get('2026-03-17'));
         $this->assertNull($categories->get('2026-03-18'));
         $this->assertTrue($categories->has('2026-03-18'));
-        $this->assertCount(2, $categories);
+        $this->assertSame('Others', $categories->get('2026-03-19'));
+        $this->assertCount(3, $categories);
     }
 }

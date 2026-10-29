@@ -41,10 +41,6 @@ class ManualAttendanceController extends Controller
         }
 
         $validated = $request->validate($rules);
-        $remarks = ManualAttendanceCategories::formatRemarks(
-            $validated['reason'],
-            $validated['remarks'] ?? null
-        );
 
         if ($status === 1) {
             $punchTypes = ['IN', 'OUT', 'LUNCH_IN', 'LUNCH_OUT'];
@@ -62,7 +58,8 @@ class ManualAttendanceController extends Controller
                     'timestamp' => $validated['attendance_date'] . ' ' . $value . ':00',
                     'status' => 1,
                     'punch_type' => $punchType,
-                    'remarks' => $remarks,
+                    'category' => $validated['reason'],
+                    'remarks' => $validated['remarks'] ?? null,
                 ];
             }
 
@@ -79,7 +76,8 @@ class ManualAttendanceController extends Controller
                 'timestamp' => $leaveDate . ' 00:00:00',
                 'status' => 0,
                 'punch_type' => 'ABSENT',
-                'remarks' => $remarks,
+                'category' => $validated['reason'],
+                'remarks' => $validated['remarks'] ?? null,
             ]);
 
             DB::table('leaves')->updateOrInsert(

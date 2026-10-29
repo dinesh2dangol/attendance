@@ -10,14 +10,6 @@ class ManualAttendanceCategories
 {
     public const REASONS = ['WFH', 'Forgot', 'Others'];
 
-    public static function formatRemarks(string $reason, ?string $remarks): string
-    {
-        $formatted = 'Reason: ' . $reason;
-        $remarks = trim((string) $remarks);
-
-        return $remarks === '' ? $formatted : $formatted . "\n" . $remarks;
-    }
-
     public static function byDate(string $userId, Carbon $start, Carbon $end): Collection
     {
         return DB::table('ManualAttendance')
@@ -26,12 +18,16 @@ class ManualAttendanceCategories
                 $start->copy()->startOfDay()->toDateTimeString(),
                 $end->copy()->endOfDay()->toDateTimeString(),
             ])
-            ->select('timestamp', 'remarks')
+            ->select('timestamp', 'category', 'remarks')
             ->orderBy('timestamp')
             ->get()
             ->groupBy(fn ($record) => Carbon::parse($record->timestamp)->format('Y-m-d'))
             ->map(function ($records) {
                 foreach ($records as $record) {
+                    if (in_array($record->category, self::REASONS, true)) {
+                        return $record->category;
+                    }
+
                     if (preg_match('/\AReason: (WFH|Forgot|Others)(?:\r?\n|\z)/', (string) $record->remarks, $matches)) {
                         return $matches[1];
                     }
