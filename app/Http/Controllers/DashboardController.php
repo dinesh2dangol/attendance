@@ -30,11 +30,16 @@ class DashboardController extends Controller
         $gender = $request->query('gender');
         $department = $request->query('department');
         $status = $request->query('status');
+        $isSuperadmin = $request->user()->role?->slug === 'superadmin';
         $perPage = in_array((int) $request->query('per_page', 25), [10, 25, 50, 100], true)
             ? (int) $request->query('per_page', 25)
             : 25;
 
         $query = Employee::orderBy('employee_name')->whereHas('department');
+
+        if (! $isSuperadmin) {
+            $query->where('status', '!=', 2);
+        }
 
         if ($search) {
             $query->where('employee_name', 'like', "%{$search}%");
@@ -54,6 +59,15 @@ class DashboardController extends Controller
 
         $employees = $query->with('department')->paginate($perPage)->withQueryString();
         $currentYear = Carbon::now()->year;
+        $showTodayPunches = $isSuperadmin;
+        $todayPunchesByUser = $showTodayPunches
+            ? DB::table('daily_attendance_step3')
+                ->whereIn('user_id', $employees->getCollection()->pluck('user_id'))
+                ->whereDate('attendance_date', Carbon::today()->toDateString())
+                ->select('user_id', 'first_punch', 'last_punch', 'lunch_out', 'lunch_in')
+                ->get()
+                ->keyBy('user_id')
+            : collect();
 
         $leaveTotalsByUser = DB::table('leaves')
             ->whereIn('user_id', $employees->getCollection()->pluck('user_id'))
@@ -147,6 +161,8 @@ class DashboardController extends Controller
             'gender',
             'search',
             'perPage',
+            'showTodayPunches',
+            'todayPunchesByUser',
             'absentDatesByUser',
             'extraDatesByUser',
             'leaveDatesByUser',

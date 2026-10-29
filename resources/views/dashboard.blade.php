@@ -166,10 +166,10 @@
                 padding: 0.65rem 0.5rem;
                 font-size: 0.9rem;
             }
-            td[colspan="8"] {
+            td[colspan] {
                 line-height: 1.6;
             }
-            td[colspan="8"] a {
+            td[colspan] a {
                 display: inline-block;
                 margin-bottom: 0.15rem;
             }
@@ -237,6 +237,9 @@
                     <select id="status" name="status">
                         <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Active</option>
                         <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Inactive</option>
+                        @if ($showTodayPunches)
+                            <option value="2" {{ request('status') === '2' ? 'selected' : '' }}>Hidden</option>
+                        @endif
                     </select>
                 </div>
                 <div class="actions">
@@ -258,6 +261,9 @@
                                     <th>Status</th>
                                     <th>Dept</th>
                                     <th>Gender</th>
+                                    @if ($showTodayPunches)
+                                        <th>Today's Punches ({{ now()->format('Y-m-d') }})</th>
+                                    @endif
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -271,6 +277,7 @@
                                         $totalAbsentDates = count($absentDates);
                                         $extraDates = $extraDatesByUser[$employee->user_id] ?? [];
                                         $totalExtra = count($extraDates);
+                                        $todayPunches = $showTodayPunches ? ($todayPunchesByUser[$employee->user_id] ?? null) : null;
                                     @endphp
                                     <tr>
                                         <td>{{ $employee->id }}</td>
@@ -280,6 +287,14 @@
                                         <td>{{ $employee->status }}</td>
                                         <td>{{ $employee->department?->department_name ?? $employee->department_id }}</td>
                                         <td>{{ $employee->gender }}</td>
+                                        @if ($showTodayPunches)
+                                            <td>
+                                                In: {{ $todayPunches?->first_punch ?? '-' }}<br>
+                                                Out: {{ $todayPunches?->last_punch ?? '-' }}<br>
+                                                Lunch Out: {{ $todayPunches?->lunch_out ?? '-' }}<br>
+                                                Lunch In: {{ $todayPunches?->lunch_in ?? '-' }}
+                                            </td>
+                                        @endif
                                         <td>
                                             @if(auth()->user()?->role?->slug === 'employee')
                                                 <a href="{{ route('employee.attendance.self') }}">Attendance</a>
@@ -294,7 +309,7 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td colspan="8">
+                                        <td colspan="{{ $showTodayPunches ? 9 : 8 }}">
                                             <details class="date-section">
                                                 <summary><strong>Absent Dates:</strong> {{ $totalAbsentDates }}</summary>
                                                 @if (!empty($absentDates))
@@ -366,6 +381,7 @@
                             $totalAbsentDates = count($absentDates);
                             $extraDates = $extraDatesByUser[$employee->user_id] ?? [];
                             $totalExtra = count($extraDates);
+                            $todayPunches = $showTodayPunches ? ($todayPunchesByUser[$employee->user_id] ?? null) : null;
                         @endphp
                         <div class="mobile-employee-item">
                             <div class="swipe-shell" data-swipe-shell>
@@ -375,6 +391,17 @@
                                             <div><span class="detail-label">Name</span><strong>{{ $employee->employee_name }}</strong></div>
                                             <div><span class="detail-label">Department</span><strong>{{ $employee->department?->department_name ?? $employee->department_id }}</strong></div>
                                             <div><span class="detail-label">Status</span><strong>{{ $employee->status }}</strong></div>
+                                            @if ($showTodayPunches)
+                                                <div>
+                                                    <span class="detail-label">Today's Punches ({{ now()->format('Y-m-d') }})</span>
+                                                    <strong>
+                                                        In: {{ $todayPunches?->first_punch ?? '-' }}<br>
+                                                        Out: {{ $todayPunches?->last_punch ?? '-' }}<br>
+                                                        Lunch Out: {{ $todayPunches?->lunch_out ?? '-' }}<br>
+                                                        Lunch In: {{ $todayPunches?->lunch_in ?? '-' }}
+                                                    </strong>
+                                                </div>
+                                            @endif
                                         </div>
                                         <div class="mobile-actions">
                                             @if(auth()->user()?->role?->slug === 'employee')
