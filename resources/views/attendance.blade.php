@@ -18,6 +18,9 @@
         .calendar-actions label { display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.9rem; color: #334155; }
         .calendar-actions select { min-width: 150px; padding: 0.75rem 0.85rem; border-radius: 0.75rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #0f172a; }
         .calendar-actions .disabled { pointer-events: none; opacity: 0.5; }
+        .yearly-summary { display: flex; flex-wrap: wrap; gap: 1rem 2rem; margin-bottom: 1.25rem; padding: 1rem 1.25rem; border: 1px solid #e2e8f0; border-radius: 0.85rem; background: #f8fafc; }
+        .yearly-summary p { margin: 0; color: #334155; }
+        .yearly-summary strong { color: #0f172a; }
         .calendar-card { border: 1px solid #e2e8f0; border-radius: 1rem; overflow: hidden; background: #ffffff; box-shadow: 0 0 0 1px rgba(203, 213, 225, 0.35); }
         .calendar-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
         .calendar-title { margin: 0; font-size: 1.1rem; font-weight: 700; }
@@ -120,6 +123,15 @@
                         @endif
                     </form>
                 </div>
+
+                @if (auth()->user()->role?->slug === 'employee')
+                    <div class="yearly-summary">
+                        <p><strong>Yearly Summary ({{ $year }})</strong></p>
+                        <p><strong>Total Attendance:</strong> {{ $totalYearlyAttendance }}</p>
+                        <p><strong>Total Absent:</strong> {{ $totalYearlyAbsent }}</p>
+                        <p><strong>Total Leaves:</strong> {{ $totalYearlyLeaves }}</p>
+                    </div>
+                @endif
 
                 <div class="calendar-weekdays">
                     <div class="calendar-weekday">Sun</div>

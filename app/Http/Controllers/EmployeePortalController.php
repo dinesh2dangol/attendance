@@ -18,6 +18,8 @@ class EmployeePortalController extends Controller
         $year = Carbon::now()->year;
         $monthStart = Carbon::create($year, $month, 1)->startOfMonth();
         $monthEnd = $monthStart->copy()->endOfMonth();
+        $yearStart = Carbon::create($year, 1, 1)->toDateString();
+        $yearEnd = Carbon::create($year, 12, 31)->toDateString();
 
         DB::statement("SET collation_connection = 'utf8mb4_0900_ai_ci'");
 
@@ -33,6 +35,72 @@ class EmployeePortalController extends Controller
             ->get()
             ->keyBy(fn ($leave) => Carbon::parse($leave->leave_date)->format('Y-m-d'));
 
-        return view('attendance', compact('employee', 'attendances', 'leavesByDate', 'monthStart', 'monthEnd'));
+        $yearlyAttendanceQuery = DB::table('daily_attendance_step3')
+            ->where('user_id', $employee->user_id)
+            ->whereBetween('attendance_date', [$yearStart, $yearEnd])
+            ->whereIn('attendance_status', ['Present', 'Remote'])
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('leaves')
+                    ->whereColumn('leaves.user_id', 'daily_attendance_step3.user_id')
+                    ->whereColumn('leaves.leave_date', 'daily_attendance_step3.attendance_date');
+            });
+
+        if ($employee->join_date_eng) {
+            $yearlyAttendanceQuery->whereDate(
+                'attendance_date',
+                '>=',
+                Carbon::parse($employee->join_date_eng)->toDateString()
+            );
+        }
+
+        $totalYearlyAttendance = $yearlyAttendanceQuery->distinct()->count('attendance_date');
+
+        $yearlyAbsentQuery = DB::table('daily_attendance_step3')
+            ->where('user_id', $employee->user_id)
+            ->whereBetween('attendance_date', [$yearStart, $yearEnd])
+            ->where('attendance_status', 'Absent')
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('leaves')
+                    ->whereColumn('leaves.user_id', 'daily_attendance_step3.user_id')
+                    ->whereColumn('leaves.leave_date', 'daily_attendance_step3.attendance_date');
+            });
+
+        if ($employee->join_date_eng) {
+            $yearlyAbsentQuery->whereDate(
+                'attendance_date',
+                '>=',
+                Carbon::parse($employee->join_date_eng)->toDateString()
+            );
+        }
+
+        $totalYearlyAbsent = $yearlyAbsentQuery->distinct()->count('attendance_date');
+
+        $yearlyLeaveQuery = DB::table('leaves')
+            ->where('user_id', $employee->user_id)
+            ->whereBetween('leave_date', [$yearStart, $yearEnd]);
+
+        if ($employee->join_date_eng) {
+            $yearlyLeaveQuery->whereDate(
+                'leave_date',
+                '>=',
+                Carbon::parse($employee->join_date_eng)->toDateString()
+            );
+        }
+
+        $totalYearlyLeaves = $yearlyLeaveQuery->distinct()->count('leave_date');
+
+        return view('attendance', compact(
+            'employee',
+            'attendances',
+            'leavesByDate',
+            'monthStart',
+            'monthEnd',
+            'year',
+            'totalYearlyAttendance',
+            'totalYearlyAbsent',
+            'totalYearlyLeaves'
+        ));
     }
 }
