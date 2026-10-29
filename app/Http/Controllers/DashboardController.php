@@ -55,6 +55,14 @@ class DashboardController extends Controller
         $employees = $query->with('department')->paginate($perPage)->withQueryString();
         $currentYear = Carbon::now()->year;
 
+        $leaveTotalsByUser = DB::table('leaves')
+            ->whereIn('user_id', $employees->getCollection()->pluck('user_id'))
+            ->select('user_id', 'leave_type', DB::raw('COUNT(*) as total'))
+            ->groupBy('user_id', 'leave_type')
+            ->orderBy('leave_type')
+            ->get()
+            ->groupBy('user_id');
+
         $joinDatesByUser = $employees->getCollection()
             ->mapWithKeys(fn ($employee) => [$employee->user_id => $employee->join_date_eng ? Carbon::parse($employee->join_date_eng)->startOfDay() : null])
             ->all();
@@ -113,7 +121,8 @@ class DashboardController extends Controller
             'search',
             'perPage',
             'absentDatesByUser',
-            'leaveDatesByUser'
+            'leaveDatesByUser',
+            'leaveTotalsByUser'
         ));
     }
 }

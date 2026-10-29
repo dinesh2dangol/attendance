@@ -81,6 +81,14 @@
             gap: 0.35rem 0.5rem;
             margin-top: 0.35rem;
         }
+        .leave-total-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem 0.5rem;
+            margin-top: 0.35rem;
+            font-size: 0.88rem;
+            color: #374151;
+        }
         .swipe-detail a {
             color: #1d4ed8;
             text-decoration: none;
@@ -255,6 +263,7 @@
                                     @php
                                         $absentDates = $absentDatesByUser[$employee->user_id] ?? [];
                                         $leaveDates = $leaveDatesByUser[$employee->user_id] ?? [];
+                                        $leaveTotals = $leaveTotalsByUser[$employee->user_id] ?? [];
                                     @endphp
                                     <tr>
                                         <td>{{ $employee->id }}</td>
@@ -310,6 +319,15 @@
                                             @else
                                                 None
                                             @endif
+                                            <br>
+                                            <strong>Leave Totals by Category:</strong>
+                                            @if (!empty($leaveTotals))
+                                                @foreach ($leaveTotals as $leaveTotal)
+                                                    {{ ucfirst($leaveTotal->leave_type) }}: {{ $leaveTotal->total }}@if (! $loop->last), @endif
+                                                @endforeach
+                                            @else
+                                                None
+                                            @endif
                                         </td>
                                     </tr>
                                 @endforeach
@@ -323,6 +341,7 @@
                         @php
                             $absentDates = $absentDatesByUser[$employee->user_id] ?? [];
                             $leaveDates = $leaveDatesByUser[$employee->user_id] ?? [];
+                            $leaveTotals = $leaveTotalsByUser[$employee->user_id] ?? [];
                         @endphp
                         <div class="mobile-employee-item">
                             <div class="swipe-shell" data-swipe-shell>
@@ -366,6 +385,16 @@
                                                     @else
                                                         <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $leaveDate->month, 'year' => $leaveDate->year], ['back' => request()->getQueryString()])) }}">{{ $leave['date'] }}{{ $leave['pending'] ? ' (P)' : '' }}</a>
                                                     @endif
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            <p>None</p>
+                                        @endif
+                                        <span class="detail-label">Leave Totals by Category</span>
+                                        @if (!empty($leaveTotals))
+                                            <div class="leave-total-list">
+                                                @foreach ($leaveTotals as $leaveTotal)
+                                                    <span>{{ ucfirst($leaveTotal->leave_type) }}: {{ $leaveTotal->total }}</span>
                                                 @endforeach
                                             </div>
                                         @else
