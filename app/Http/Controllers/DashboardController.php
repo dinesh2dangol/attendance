@@ -67,6 +67,28 @@ class DashboardController extends Controller
             ->mapWithKeys(fn ($employee) => [$employee->user_id => $employee->join_date_eng ? Carbon::parse($employee->join_date_eng)->startOfDay() : null])
             ->all();
 
+        $extraDatesByUser = DB::table('daily_attendance_step3')
+            ->whereIn('user_id', $employees->getCollection()->pluck('user_id'))
+            ->whereYear('attendance_date', $currentYear)
+            ->whereIn('attendance_status', ['Present', 'Remote'])
+            ->whereIn('day_type', ['Holiday', 'Weekend'])
+            ->select('user_id', 'attendance_date')
+            ->distinct()
+            ->orderBy('attendance_date')
+            ->get()
+            ->groupBy('user_id')
+            ->map(function ($rows, $userId) use ($joinDatesByUser) {
+                $joinDate = $joinDatesByUser[$userId] ?? null;
+
+                return $rows
+                    ->pluck('attendance_date')
+                    ->filter(fn ($date) => ! $joinDate || Carbon::parse($date)->greaterThanOrEqualTo($joinDate))
+                    ->map(fn ($date) => Carbon::parse($date)->format('Y-m-d'))
+                    ->values()
+                    ->all();
+            })
+            ->all();
+
         $absentDatesByUser = DB::table('daily_attendance_step3')
             ->where('attendance_status', 'Absent')
             ->whereYear('attendance_date', $currentYear)
@@ -126,6 +148,7 @@ class DashboardController extends Controller
             'search',
             'perPage',
             'absentDatesByUser',
+            'extraDatesByUser',
             'leaveDatesByUser',
             'leaveTotalsByUser'
         ));

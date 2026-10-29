@@ -21,6 +21,8 @@
         .yearly-summary { display: flex; flex-wrap: wrap; gap: 1rem 2rem; margin-bottom: 1.25rem; padding: 1rem 1.25rem; border: 1px solid #e2e8f0; border-radius: 0.85rem; background: #f8fafc; }
         .yearly-summary p { margin: 0; color: #334155; }
         .yearly-summary strong { color: #0f172a; }
+        .summary-extra-dates { display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; margin-top: 0.4rem; }
+        .summary-extra-dates a { color: #1d4ed8; text-decoration: none; }
         .calendar-card { border: 1px solid #e2e8f0; border-radius: 1rem; overflow: hidden; background: #ffffff; box-shadow: 0 0 0 1px rgba(203, 213, 225, 0.35); }
         .calendar-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
         .calendar-title { margin: 0; font-size: 1.1rem; font-weight: 700; }
@@ -124,15 +126,51 @@
                     </form>
                 </div>
 
-                @if (auth()->user()->role?->slug === 'employee')
-                    <div class="yearly-summary">
-                        <p><strong>Yearly Summary ({{ $year }})</strong></p>
-                        <p><strong>Total Attendance:</strong> {{ $totalYearlyAttendance }}</p>
-                        <p><strong>Total Extra:</strong> {{ $totalYearlyExtra }}</p>
-                        <p><strong>Total Absent:</strong> {{ $totalYearlyAbsent }}</p>
-                        <p><strong>Total Leaves:</strong> {{ $totalYearlyLeaves }}</p>
-                    </div>
-                @endif
+                <div class="yearly-summary">
+                    <p><strong>Yearly Summary ({{ $year }})</strong></p>
+                    <p><strong>Total Attendance:</strong> {{ $totalYearlyAttendance }}</p>
+                    <p><strong>Total Extra:</strong> {{ $totalYearlyExtra }}</p>
+                    <p><strong>Total Absent:</strong> {{ $totalYearlyAbsent }}</p>
+                    <p><strong>Total Leaves:</strong> {{ $totalYearlyLeaves }}
+                        @if ($yearlyLeaveTotals->isNotEmpty())
+                            (
+                            @foreach ($yearlyLeaveTotals as $type => $total)
+                                {{ ucfirst($type) }}: {{ $total }}@if (! $loop->last), @endif
+                            @endforeach
+                            )
+                        @endif
+                    </p>
+                    @foreach ([
+                        'Absent Dates' => $yearlyAbsentDates,
+                        'Leave Dates' => $yearlyLeaveDates,
+                        'Extra Dates' => $yearlyExtraDates,
+                    ] as $label => $dates)
+                        <div>
+                            <p><strong>{{ $label }}:</strong></p>
+                            @if (!empty($dates))
+                                <div class="summary-extra-dates">
+                                    @foreach ($dates as $item)
+                                        @php
+                                            $date = is_array($item) ? $item['date'] : $item;
+                                            $dateValue = \Carbon\Carbon::parse($date);
+                                            $suffix = is_array($item)
+                                                ? (($item['type'] ? ' (' . $item['type'] . ')' : '') . ($item['pending'] ? ' (P)' : ''))
+                                                : '';
+                                        @endphp
+                                        @if (auth()->user()->role?->slug === 'employee')
+                                            <a href="{{ route('employee.attendance.self', ['month' => $dateValue->month, 'year' => $dateValue->year]) }}">{{ $date }}{{ $suffix }}</a>
+                                        @else
+                                            <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $dateValue->month, 'year' => $dateValue->year], ['back' => request()->query('back')])) }}">{{ $date }}{{ $suffix }}</a>
+                                        @endif
+                                        @if (! $loop->last), @endif
+                                    @endforeach
+                                </div>
+                            @else
+                                <p>None</p>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
 
                 <div class="calendar-weekdays">
                     <div class="calendar-weekday">Sun</div>

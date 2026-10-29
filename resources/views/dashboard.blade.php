@@ -266,6 +266,8 @@
                                         $leaveTotals = $leaveTotalsByUser[$employee->user_id] ?? [];
                                         $totalLeaves = collect($leaveTotals)->sum('total');
                                         $totalAbsentDates = count($absentDates);
+                                        $extraDates = $extraDatesByUser[$employee->user_id] ?? [];
+                                        $totalExtra = count($extraDates);
                                     @endphp
                                     <tr>
                                         <td>{{ $employee->id }}</td>
@@ -322,6 +324,19 @@
                                                 None
                                             @endif
                                             <br>
+                                            <strong>Extra Dates:</strong>
+                                            @if (!empty($extraDates))
+                                                @foreach ($extraDates as $date)
+                                                    @php
+                                                        $extraDate = \Carbon\Carbon::parse($date);
+                                                    @endphp
+                                                    <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $extraDate->month, 'year' => $extraDate->year], ['back' => request()->getQueryString()])) }}">{{ $date }}</a>@if (! $loop->last), @endif
+                                                @endforeach
+                                            @else
+                                                None
+                                            @endif
+                                            <br>
+                                            <strong>Total Extra:</strong> {{ $totalExtra }}<br>
                                             <strong>Total Absent:</strong> {{ $totalAbsentDates }}<br>
                                             @if (!empty($leaveTotals))
                                                 <strong>Total Leaves: </strong>{{ $totalLeaves }} (
@@ -351,6 +366,8 @@
                             $leaveTotals = $leaveTotalsByUser[$employee->user_id] ?? [];
                             $totalLeaves = collect($leaveTotals)->sum('total');
                             $totalAbsentDates = count($absentDates);
+                            $extraDates = $extraDatesByUser[$employee->user_id] ?? [];
+                            $totalExtra = count($extraDates);
                         @endphp
                         <div class="mobile-employee-item">
                             <div class="swipe-shell" data-swipe-shell>
@@ -399,8 +416,23 @@
                                         @else
                                             <p>None</p>
                                         @endif
+                                        <span class="detail-label">Extra Dates</span>
+                                        @if (!empty($extraDates))
+                                            <div class="date-list">
+                                                @foreach ($extraDates as $date)
+                                                    @php
+                                                        $extraDate = \Carbon\Carbon::parse($date);
+                                                    @endphp
+                                                    <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $extraDate->month, 'year' => $extraDate->year], ['back' => request()->getQueryString()])) }}">{{ $date }}</a>
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            <p>None</p>
+                                        @endif
                                         <span class="detail-label">Total Absent Dates</span>
                                         <p>{{ $totalAbsentDates }}</p>
+                                        <span class="detail-label">Total Extra</span>
+                                        <p>{{ $totalExtra }}</p>
                                         <span class="detail-label">Leave Totals</span>
                                         @if (!empty($leaveTotals))
                                             <div class="leave-total-list">

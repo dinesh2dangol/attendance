@@ -25,6 +25,7 @@ class DashboardLeaveSummaryTest extends TestCase
             $table->string('user_id');
             $table->date('attendance_date');
             $table->string('attendance_status');
+            $table->string('day_type')->nullable();
         });
 
         $department = Department::create(['department_name' => 'Operations']);
@@ -59,6 +60,12 @@ class DashboardLeaveSummaryTest extends TestCase
                 'user_id' => $employee->user_id,
                 'attendance_date' => "{$leaveYear}-01-14",
                 'attendance_status' => 'Absent',
+            ],
+            [
+                'user_id' => $employee->user_id,
+                'attendance_date' => "{$leaveYear}-01-17",
+                'attendance_status' => 'Present',
+                'day_type' => 'Weekend',
             ],
         ]);
 
@@ -99,6 +106,9 @@ class DashboardLeaveSummaryTest extends TestCase
             ->assertSee('Total Leaves:</strong> 3')
             ->assertSee('Total Absent Dates:</strong> 2')
             ->assertSee('Total Absent Dates</span>')
+            ->assertSee('Extra Dates:')
+            ->assertSee("{$leaveYear}-01-17")
+            ->assertSee('Total Extra:</strong> 1')
             ->assertSee('Maternity: 1')
             ->assertSee('Total Leaves</span>')
             ->assertSee("{$leaveYear}-01-10 (S) (P)")
