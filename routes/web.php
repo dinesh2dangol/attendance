@@ -16,9 +16,11 @@ use App\Http\Controllers\EmployeePortalController;
 use App\Http\Controllers\EmployeeAccountController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\ManualAttendanceController;
+use App\Http\Controllers\WorkFromHomeRequestController;
 use App\Support\HolidayCalendar;
 use App\Support\ManualAttendanceCategories;
 use App\Support\YearlyAttendanceSummary;
+use App\Support\WorkFromHomeCalendar;
 
 Route::get('/', function () {
     return view('welcome');
@@ -162,6 +164,11 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
         $monthEnd
     );
     $holidaysByDate = HolidayCalendar::byDate($employee, $monthStart, $monthEnd);
+    $approvedWfhDates = WorkFromHomeCalendar::approvedDatesByDate(
+        $employee->user_id,
+        $monthStart,
+        $monthEnd
+    );
     $yearlySummary = YearlyAttendanceSummary::for($employee, $year);
 
     return view('attendance', compact(
@@ -171,12 +178,18 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
         'monthStart',
         'monthEnd',
         'holidaysByDate',
+        'approvedWfhDates',
         'manualAttendanceByDate',
         'year'
     ) + $yearlySummary);
 })->middleware(['auth', 'role:admin,superadmin'])->name('employee.attendance');
 
 Route::middleware('auth')->group(function () {
+    Route::middleware('role:superadmin')->group(function () {
+        Route::get('wfh-requests/create', [WorkFromHomeRequestController::class, 'create'])->name('wfh-requests.create');
+        Route::post('wfh-requests', [WorkFromHomeRequestController::class, 'store'])->name('wfh-requests.store');
+    });
+
     Route::middleware('role:admin,superadmin')->group(function () {
         Route::get('leaves', [LeaveController::class, 'index'])->name('leaves.index');
         Route::get('leaves/create', [LeaveController::class, 'create'])->name('leaves.create');
@@ -185,6 +198,9 @@ Route::middleware('auth')->group(function () {
         Route::put('leaves/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
         Route::get('leaves/approval', [LeaveController::class, 'approval'])->name('leaves.approval');
         Route::post('leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve');
+        Route::get('wfh-requests', [WorkFromHomeRequestController::class, 'index'])->name('wfh-requests.index');
+        Route::post('wfh-requests/{workFromHomeRequest}/approve', [WorkFromHomeRequestController::class, 'approve'])->name('wfh-requests.approve');
+        Route::post('wfh-requests/{workFromHomeRequest}/reject', [WorkFromHomeRequestController::class, 'reject'])->name('wfh-requests.reject');
 
         Route::get('manual-attendance/create', [ManualAttendanceController::class, 'create'])->name('manual-attendance.create');
         Route::post('manual-attendance', [ManualAttendanceController::class, 'store'])->name('manual-attendance.store');
@@ -198,4 +214,7 @@ Route::middleware(['auth', 'role:employee'])->group(function () {
     Route::post('my-leaves', [LeaveController::class, 'store'])->name('employee.leaves.store');
     Route::get('my-leaves/{leave}/edit', [LeaveController::class, 'edit'])->name('employee.leaves.edit');
     Route::put('my-leaves/{leave}', [LeaveController::class, 'update'])->name('employee.leaves.update');
+    Route::get('my-wfh-requests', [WorkFromHomeRequestController::class, 'index'])->name('employee.wfh.index');
+    Route::get('my-wfh-requests/create', [WorkFromHomeRequestController::class, 'create'])->name('employee.wfh.create');
+    Route::post('my-wfh-requests', [WorkFromHomeRequestController::class, 'store'])->name('employee.wfh.store');
 });

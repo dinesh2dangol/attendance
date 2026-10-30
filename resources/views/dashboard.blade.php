@@ -201,6 +201,7 @@
                 <button class="button" type="submit">Log out</button>
             </form>
         </div>
+        <p><a class="button button-secondary" href="{{ route('wfh-requests.index') }}">WFH Requests</a></p>
 
         {{-- Manage Employee Logins disabled temporarily --}}
 

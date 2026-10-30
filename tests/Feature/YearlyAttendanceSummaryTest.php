@@ -31,6 +31,12 @@ class YearlyAttendanceSummaryTest extends TestCase
             $table->string('holiday_name');
             $table->unsignedBigInteger('department_id')->nullable();
         });
+        Schema::create('work_from_home_requests', function (Blueprint $table) {
+            $table->string('user_id');
+            $table->date('start_date');
+            $table->date('end_date');
+            $table->string('status');
+        });
 
         $employee = new Employee([
             'user_id' => 'EMP-001',
@@ -85,14 +91,28 @@ class YearlyAttendanceSummaryTest extends TestCase
                 'approval_status' => 0,
             ],
         ]);
+        DB::table('work_from_home_requests')->insert([
+            [
+                'user_id' => 'EMP-001',
+                'start_date' => '2026-01-12',
+                'end_date' => '2026-01-12',
+                'status' => 'approved',
+            ],
+            [
+                'user_id' => 'EMP-001',
+                'start_date' => '2026-01-14',
+                'end_date' => '2026-01-15',
+                'status' => 'approved',
+            ],
+        ]);
 
         $summary = YearlyAttendanceSummary::for($employee, 2026);
 
-        $this->assertSame(2, $summary['totalYearlyAttendance']);
+        $this->assertSame(5, $summary['totalYearlyAttendance']);
         $this->assertSame(2, $summary['totalYearlyExtra']);
         $this->assertSame(['2026-01-05', '2026-01-10'], $summary['yearlyExtraDates']);
-        $this->assertSame(1, $summary['totalYearlyAbsent']);
-        $this->assertSame(['2026-01-12'], $summary['yearlyAbsentDates']);
+        $this->assertSame(0, $summary['totalYearlyAbsent']);
+        $this->assertSame([], $summary['yearlyAbsentDates']);
         $this->assertSame(2, $summary['totalYearlyLeaves']);
         $this->assertSame([
             ['date' => '2026-01-11', 'type' => 'C', 'pending' => false],

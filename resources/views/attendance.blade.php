@@ -81,6 +81,8 @@
             <div style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center;">
                 @if (auth()->user()->role?->slug === 'employee')
                     <a class="button button-secondary" href="{{ route('employee.leaves.index') }}">My Leaves</a>
+                    <a class="button button-secondary" href="{{ route('employee.wfh.index') }}">My WFH Requests</a>
+                    <a class="button" href="{{ route('employee.wfh.create') }}">Request WFH</a>
                 @endif
                 @if (auth()->user()?->role?->slug !== 'employee')
                     @if(request()->query('back'))
@@ -215,6 +217,10 @@
                         $holiday = $isCurrentMonth ? $holidaysByDate->get($dateKey) : null;
                         $isManualAttendance = $isCurrentMonth && $manualAttendanceByDate->has($dateKey);
                         $manualCategory = $isManualAttendance ? $manualAttendanceByDate->get($dateKey) : null;
+                        $approvedWfh = $isCurrentMonth && $approvedWfhDates->has($dateKey);
+                        $approvedWfhWithoutPresence = $approvedWfh && ! $dayRecords->contains(fn ($record) =>
+                            in_array(data_get($record, 'attendance_status'), ['Present', 'Remote'], true)
+                        );
                         $workedOnWeekend = $dayRecords->contains(fn ($record) =>
                             data_get($record, 'day_type') === 'Weekend'
                             && in_array(data_get($record, 'attendance_status'), ['Present', 'Remote'], true)
@@ -226,8 +232,12 @@
                             @if ($holiday)
                                 <span class="attendance-chip weekend">Holiday</span>
                                 <div>{{ $holiday->holiday_name ?? '-' }}</div>
+                                @if ($approvedWfhWithoutPresence)
+                                    <span class="attendance-chip remote">Remote</span>
+                                    <div>Approved work from home</div>
+                                @endif
                                 @foreach ($dayRecords->whereIn('attendance_status', ['Present', 'Remote']) as $record)
-                                    <span class="attendance-chip {{ Str::slug($record->attendance_status) }}">{{ $record->attendance_status }} (Extra)</span>
+                                    <span class="attendance-chip {{ Str::slug($approvedWfh ? 'Remote' : $record->attendance_status) }}">{{ $approvedWfh ? 'Remote' : $record->attendance_status }} (Extra)</span>
                                     <div class="attendance-details">
                                         <div><span>In:</span> {{ data_get($record, 'first_punch') ?? '-' }}</div>
                                         <div><span>Out:</span> {{ data_get($record, 'last_punch') ?? '-' }}</div>
@@ -241,8 +251,12 @@
                                 @endforeach
                             @elseif ($workedOnWeekend)
                                 <span class="attendance-chip weekend">Weekend</span>
+                                @if ($approvedWfhWithoutPresence)
+                                    <span class="attendance-chip remote">Remote</span>
+                                    <div>Approved work from home</div>
+                                @endif
                                 @foreach ($dayRecords->where('day_type', 'Weekend')->whereIn('attendance_status', ['Present', 'Remote']) as $record)
-                                    <span class="attendance-chip {{ Str::slug($record->attendance_status) }}">{{ $record->attendance_status }} (Extra)</span>
+                                    <span class="attendance-chip {{ Str::slug($approvedWfh ? 'Remote' : $record->attendance_status) }}">{{ $approvedWfh ? 'Remote' : $record->attendance_status }} (Extra)</span>
                                     <div class="attendance-details">
                                         <div><span>In:</span> {{ data_get($record, 'first_punch') ?? '-' }}</div>
                                         <div><span>Out:</span> {{ data_get($record, 'last_punch') ?? '-' }}</div>
@@ -262,6 +276,18 @@
                                     <div>{{ (int) $leave->approval_status === 1 ? 'Approved' : 'Pending' }}</div>
                                     @if ($isManualAttendance)
                                         <div><span>Category:</span> {{ $manualCategory ?? 'Not specified' }}</div>
+                                    @endif
+                                </div>
+                            @else
+                            @if ($approvedWfh)
+                                @php $wfhRecord = $dayRecords->first(); @endphp
+                                <span class="attendance-chip remote">Remote</span>
+                                <div class="attendance-details">
+                                    <div><span>Date:</span> {{ $day->format('Y-m-d') }}</div>
+                                    <div>Approved work from home</div>
+                                    @if ($wfhRecord)
+                                        <div><span>In:</span> {{ data_get($wfhRecord, 'first_punch') ?? '-' }}</div>
+                                        <div><span>Out:</span> {{ data_get($wfhRecord, 'last_punch') ?? '-' }}</div>
                                     @endif
                                 </div>
                             @else
@@ -344,6 +370,7 @@
                             @empty
                                 <span class="attendance-chip no-entry">No entry</span>
                             @endforelse
+                            @endif
                             @endif
                         </div>
                 @endforeach

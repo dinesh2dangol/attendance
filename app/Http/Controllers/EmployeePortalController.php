@@ -6,6 +6,7 @@ use App\Models\Employee;
 use App\Support\HolidayCalendar;
 use App\Support\ManualAttendanceCategories;
 use App\Support\YearlyAttendanceSummary;
+use App\Support\WorkFromHomeCalendar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -41,6 +42,11 @@ class EmployeePortalController extends Controller
             $monthEnd
         );
         $holidaysByDate = HolidayCalendar::byDate($employee, $monthStart, $monthEnd);
+        $approvedWfhDates = WorkFromHomeCalendar::approvedDatesByDate(
+            $employee->user_id,
+            $monthStart,
+            $monthEnd
+        );
 
         $yearlySummary = YearlyAttendanceSummary::for($employee, $year);
 
@@ -51,6 +57,7 @@ class EmployeePortalController extends Controller
             'monthStart',
             'monthEnd',
             'holidaysByDate',
+            'approvedWfhDates',
             'manualAttendanceByDate',
             'year'
         ) + $yearlySummary);

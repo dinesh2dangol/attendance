@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class LeaveController extends Controller
 {
@@ -86,6 +87,7 @@ class LeaveController extends Controller
             'leave_date.unique' => 'A leave request already exists for this employee on the selected date.',
             'leave_date.after_or_equal' => 'You cannot apply for a past date.',
         ]);
+        $this->ensureNoWfhConflict($userIdForRule, $validated['leave_date']);
 
         // Default approval_status to 0 (pending)
         if ($isEmployee) {
@@ -161,6 +163,7 @@ class LeaveController extends Controller
             'leave_date.unique' => 'A leave request already exists for this employee on the selected date.',
             'leave_date.after_or_equal' => 'You cannot set a past date.',
         ]);
+        $this->ensureNoWfhConflict($userIdForRule, $validated['leave_date']);
 
         $leave->update($validated);
 
@@ -210,6 +213,22 @@ class LeaveController extends Controller
             ->get();
 
         return view('leaves.approval', compact('employees', 'filterEmployee', 'userId', 'month', 'year', 'absentCount', 'totalLeaves', 'pendingLeaves', 'approvedLeaves'));
+    }
+
+    private function ensureNoWfhConflict(?string $userId, string $leaveDate): void
+    {
+        $hasWfhRequest = DB::table('work_from_home_requests')
+            ->where('user_id', $userId)
+            ->whereIn('status', ['pending', 'approved'])
+            ->whereDate('start_date', '<=', $leaveDate)
+            ->whereDate('end_date', '>=', $leaveDate)
+            ->exists();
+
+        if ($hasWfhRequest) {
+            throw ValidationException::withMessages([
+                'leave_date' => 'This date is covered by a pending or approved WFH request.',
+            ]);
+        }
     }
 
     public function approve(Leave $leave)
