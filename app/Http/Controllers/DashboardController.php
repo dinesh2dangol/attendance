@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Department;
 use App\Models\Employee;
-use App\Support\WorkFromHomeCalendar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -112,14 +111,6 @@ class DashboardController extends Controller
                     ->from('leaves')
                     ->whereColumn('leaves.user_id', 'daily_attendance_step3.user_id')
                     ->whereColumn('leaves.leave_date', 'daily_attendance_step3.attendance_date');
-            })
-            ->whereNotExists(function ($query) {
-                $query->select(DB::raw(1))
-                    ->from('work_from_home_requests');
-                WorkFromHomeCalendar::matchAttendanceUserId($query);
-                $query->whereColumn('work_from_home_requests.start_date', '<=', 'daily_attendance_step3.attendance_date')
-                    ->whereColumn('work_from_home_requests.end_date', '>=', 'daily_attendance_step3.attendance_date')
-                    ->where('work_from_home_requests.status', 'approved');
             })
             ->select('user_id', 'attendance_date')
             ->orderBy('attendance_date')

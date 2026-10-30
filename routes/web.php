@@ -169,6 +169,11 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
         $monthStart,
         $monthEnd
     );
+    $pendingWfhDates = WorkFromHomeCalendar::pendingDatesByDate(
+        $employee->user_id,
+        $monthStart,
+        $monthEnd
+    );
     $yearlySummary = YearlyAttendanceSummary::for($employee, $year);
 
     return view('attendance', compact(
@@ -179,6 +184,7 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
         'monthEnd',
         'holidaysByDate',
         'approvedWfhDates',
+        'pendingWfhDates',
         'manualAttendanceByDate',
         'year'
     ) + $yearlySummary);

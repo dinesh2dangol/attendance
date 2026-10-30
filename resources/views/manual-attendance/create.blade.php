@@ -51,7 +51,7 @@
                 <label for="status">Status</label>
                 <select id="status" name="status" required>
                     <option value="">-- Select status --</option>
-                    <option value="1" {{ old('status') === '1' ? 'selected' : '' }}>Present</option>
+                    <option value="1" {{ old('status', $selectedStatus) === '1' ? 'selected' : '' }}>Present</option>
                     <option value="0" {{ old('status') === '0' ? 'selected' : '' }}>Absent</option>
                 </select>
             </div>
@@ -78,7 +78,7 @@
                 <select id="reason" name="reason" required>
                     <option value="">-- Select reason --</option>
                     @foreach ($reasons as $reason)
-                        <option value="{{ $reason }}" {{ old('reason') === $reason ? 'selected' : '' }}>{{ $reason }}</option>
+                        <option value="{{ $reason }}" {{ old('reason', $selectedReason) === $reason ? 'selected' : '' }}>{{ $reason }}</option>
                     @endforeach
                 </select>
             </div>

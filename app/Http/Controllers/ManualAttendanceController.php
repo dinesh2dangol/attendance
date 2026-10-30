@@ -19,6 +19,8 @@ class ManualAttendanceController extends Controller
             'employees' => $employees,
             'selectedUserId' => $request->query('user_id'),
             'selectedTimestamp' => $request->query('timestamp'),
+            'selectedStatus' => $request->query('status'),
+            'selectedReason' => $request->query('reason'),
             'reasons' => ManualAttendanceCategories::REASONS,
         ]);
     }

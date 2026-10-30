@@ -24,9 +24,19 @@ class WorkFromHomeCalendar
 
     public static function approvedDatesByDate(string $userId, Carbon $start, Carbon $end): Collection
     {
+        return self::datesByStatus($userId, $start, $end, 'approved');
+    }
+
+    public static function pendingDatesByDate(string $userId, Carbon $start, Carbon $end): Collection
+    {
+        return self::datesByStatus($userId, $start, $end, 'pending');
+    }
+
+    private static function datesByStatus(string $userId, Carbon $start, Carbon $end, string $status): Collection
+    {
         $requests = DB::table('work_from_home_requests')
             ->where('user_id', $userId)
-            ->where('status', 'approved')
+            ->where('status', $status)
             ->whereDate('start_date', '<=', $end->toDateString())
             ->whereDate('end_date', '>=', $start->toDateString())
             ->get(['start_date', 'end_date']);

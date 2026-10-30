@@ -47,6 +47,11 @@ class EmployeePortalController extends Controller
             $monthStart,
             $monthEnd
         );
+        $pendingWfhDates = WorkFromHomeCalendar::pendingDatesByDate(
+            $employee->user_id,
+            $monthStart,
+            $monthEnd
+        );
 
         $yearlySummary = YearlyAttendanceSummary::for($employee, $year);
 
@@ -58,6 +63,7 @@ class EmployeePortalController extends Controller
             'monthEnd',
             'holidaysByDate',
             'approvedWfhDates',
+            'pendingWfhDates',
             'manualAttendanceByDate',
             'year'
         ) + $yearlySummary);

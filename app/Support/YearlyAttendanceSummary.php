@@ -15,15 +15,6 @@ class YearlyAttendanceSummary
         $joinDate = $employee->join_date_eng
             ? Carbon::parse($employee->join_date_eng)->toDateString()
             : null;
-        $approvedWfhDates = WorkFromHomeCalendar::approvedDatesByDate(
-            $employee->user_id,
-            Carbon::parse($yearStart),
-            Carbon::parse($yearEnd)
-        );
-        if ($joinDate) {
-            $approvedWfhDates = $approvedWfhDates->filter(fn ($approved, $date) => $date >= $joinDate);
-        }
-
         $attendanceQuery = DB::table('daily_attendance_step3')
             ->where('user_id', $employee->user_id)
             ->whereBetween('attendance_date', [$yearStart, $yearEnd])
@@ -39,14 +30,7 @@ class YearlyAttendanceSummary
             $attendanceQuery->whereDate('attendance_date', '>=', $joinDate);
         }
 
-        $yearlyAttendanceDates = (clone $attendanceQuery)
-            ->distinct()
-            ->pluck('attendance_date')
-            ->map(fn ($date) => Carbon::parse($date)->format('Y-m-d'));
-        $totalYearlyAttendance = $yearlyAttendanceDates
-            ->merge($approvedWfhDates->keys())
-            ->unique()
-            ->count();
+        $totalYearlyAttendance = (clone $attendanceQuery)->distinct()->count('attendance_date');
 
         $extraQuery = DB::table('daily_attendance_step3')
             ->where('user_id', $employee->user_id)
@@ -85,14 +69,6 @@ class YearlyAttendanceSummary
                     ->from('leaves')
                     ->whereColumn('leaves.user_id', 'daily_attendance_step3.user_id')
                     ->whereColumn('leaves.leave_date', 'daily_attendance_step3.attendance_date');
-            })
-            ->whereNotExists(function ($query) {
-                $query->select(DB::raw(1))
-                    ->from('work_from_home_requests');
-                WorkFromHomeCalendar::matchAttendanceUserId($query);
-                $query->whereColumn('work_from_home_requests.start_date', '<=', 'daily_attendance_step3.attendance_date')
-                    ->whereColumn('work_from_home_requests.end_date', '>=', 'daily_attendance_step3.attendance_date')
-                    ->where('work_from_home_requests.status', 'approved');
             });
 
         if ($joinDate) {

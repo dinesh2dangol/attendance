@@ -37,4 +37,30 @@ class WorkFromHomeCalendarTest extends TestCase
             '2026-03-18' => true,
         ], $dates->all());
     }
+
+    public function test_it_includes_pending_requests_as_calendar_dates(): void
+    {
+        Schema::create('work_from_home_requests', function (Blueprint $table) {
+            $table->string('user_id');
+            $table->date('start_date');
+            $table->date('end_date');
+            $table->string('status');
+        });
+
+        DB::table('work_from_home_requests')->insert([
+            ['user_id' => 'EMP-1', 'start_date' => '2026-03-16', 'end_date' => '2026-03-18', 'status' => 'pending'],
+            ['user_id' => 'EMP-1', 'start_date' => '2026-03-19', 'end_date' => '2026-03-20', 'status' => 'approved'],
+        ]);
+
+        $dates = WorkFromHomeCalendar::pendingDatesByDate(
+            'EMP-1',
+            Carbon::parse('2026-03-17'),
+            Carbon::parse('2026-03-19')
+        );
+
+        $this->assertSame([
+            '2026-03-17' => true,
+            '2026-03-18' => true,
+        ], $dates->all());
+    }
 }

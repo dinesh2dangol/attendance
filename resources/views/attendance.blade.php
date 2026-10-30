@@ -218,9 +218,11 @@
                         $isManualAttendance = $isCurrentMonth && $manualAttendanceByDate->has($dateKey);
                         $manualCategory = $isManualAttendance ? $manualAttendanceByDate->get($dateKey) : null;
                         $approvedWfh = $isCurrentMonth && $approvedWfhDates->has($dateKey);
-                        $approvedWfhWithoutPresence = $approvedWfh && ! $dayRecords->contains(fn ($record) =>
+                        $pendingWfh = $isCurrentMonth && $pendingWfhDates->has($dateKey);
+                        $approvedWfhAttendance = $approvedWfh ? $dayRecords->first(fn ($record) =>
                             in_array(data_get($record, 'attendance_status'), ['Present', 'Remote'], true)
-                        );
+                        ) : null;
+                        $approvedWfhWithoutPresence = $approvedWfh && ! $approvedWfhAttendance;
                         $workedOnWeekend = $dayRecords->contains(fn ($record) =>
                             data_get($record, 'day_type') === 'Weekend'
                             && in_array(data_get($record, 'attendance_status'), ['Present', 'Remote'], true)
@@ -229,13 +231,25 @@
                     <div class="calendar-day{{ $isCurrentMonth ? '' : ' other-month' }}">
                         <div class="calendar-day-week">{{ $day->format('D') }}</div>
                         <div class="calendar-day-date">{{ $day->format('j') }}</div>
-                            @if ($holiday)
+                            @if ($pendingWfh)
+                                <span class="attendance-chip absent">WFH (P)</span>
+                                <div class="attendance-details">
+                                    <div><span>Date:</span> {{ $dateKey }}</div>
+                                    <div>Work from home request pending approval</div>
+                                </div>
+                            @endif
+                            @if ($approvedWfhWithoutPresence)
+                                <span class="attendance-chip absent">Absent</span>
+                                <div class="attendance-details">
+                                    <div><span>Date:</span> {{ $dateKey }}</div>
+                                    <div>Approved WFH - attendance not marked</div>
+                                </div>
+                                @if (in_array(auth()->user()->role?->slug, ['admin', 'superadmin'], true))
+                                    <a class="button button-secondary" href="{{ route('manual-attendance.create', ['user_id' => $employee->user_id, 'timestamp' => $dateKey . 'T09:00', 'status' => '1', 'reason' => 'WFH']) }}" style="font-size: 0.75rem; padding: 0.5rem 0.7rem; margin-top: 0.15rem;">Mark Present</a>
+                                @endif
+                            @elseif ($holiday)
                                 <span class="attendance-chip weekend">Holiday</span>
                                 <div>{{ $holiday->holiday_name ?? '-' }}</div>
-                                @if ($approvedWfhWithoutPresence)
-                                    <span class="attendance-chip remote">Remote</span>
-                                    <div>Approved work from home</div>
-                                @endif
                                 @foreach ($dayRecords->whereIn('attendance_status', ['Present', 'Remote']) as $record)
                                     <span class="attendance-chip {{ Str::slug($approvedWfh ? 'Remote' : $record->attendance_status) }}">{{ $approvedWfh ? 'Remote' : $record->attendance_status }} (Extra)</span>
                                     <div class="attendance-details">
@@ -251,10 +265,6 @@
                                 @endforeach
                             @elseif ($workedOnWeekend)
                                 <span class="attendance-chip weekend">Weekend</span>
-                                @if ($approvedWfhWithoutPresence)
-                                    <span class="attendance-chip remote">Remote</span>
-                                    <div>Approved work from home</div>
-                                @endif
                                 @foreach ($dayRecords->where('day_type', 'Weekend')->whereIn('attendance_status', ['Present', 'Remote']) as $record)
                                     <span class="attendance-chip {{ Str::slug($approvedWfh ? 'Remote' : $record->attendance_status) }}">{{ $approvedWfh ? 'Remote' : $record->attendance_status }} (Extra)</span>
                                     <div class="attendance-details">
@@ -279,7 +289,7 @@
                                     @endif
                                 </div>
                             @else
-                            @if ($approvedWfh)
+                            @if ($approvedWfhAttendance)
                                 @php $wfhRecord = $dayRecords->first(); @endphp
                                 <span class="attendance-chip remote">Remote</span>
                                 <div class="attendance-details">
@@ -318,7 +328,7 @@
                                             <div><span>Category:</span> {{ $manualCategory ?? 'Not specified' }}</div>
                                         @endif
                                     </div>
-                                        @if (auth()->user()->role?->slug === 'admin')
+                                        @if (in_array(auth()->user()->role?->slug, ['admin', 'superadmin'], true))
                                         @php $leaveParams = ['user_id' => $employee->user_id, 'leave_date' => $day->format('Y-m-d')]; if(request()->query('back')) { $leaveParams = array_merge($leaveParams, ['back' => request()->query('back')]); } @endphp
                                         <a class="button button-secondary" href="{{ route('leaves.create', $leaveParams) }}" style="font-size: 0.75rem; padding: 0.5rem 0.7rem; margin-top: 0.15rem;">Add Leave</a>
                                         <a class="button button-secondary" href="{{ route('manual-attendance.create', ['user_id' => $employee->user_id, 'timestamp' => $day->format('Y-m-d') . 'T09:00']) }}" style="font-size: 0.75rem; padding: 0.5rem 0.7rem; margin-top: 0.15rem;">Add Manual Attendance</a>
