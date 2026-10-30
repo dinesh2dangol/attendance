@@ -82,7 +82,6 @@
                 @if (auth()->user()->role?->slug === 'employee')
                     <a class="button button-secondary" href="{{ route('employee.leaves.index') }}">My Leaves</a>
                     <a class="button button-secondary" href="{{ route('employee.wfh.index') }}">My WFH Requests</a>
-                    <a class="button" href="{{ route('employee.wfh.create') }}">Request WFH</a>
                 @endif
                 @if (auth()->user()?->role?->slug !== 'employee')
                     @if(request()->query('back'))
