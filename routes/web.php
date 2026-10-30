@@ -77,7 +77,7 @@ Route::get('employees/{employee}/edit', function (App\Models\Employee $employee)
     $departments = Department::orderBy('department_name')->get();
 
     return view('employee.edit', compact('employee', 'departments'));
-})->middleware(['auth', 'role:admin'])->name('employees.edit');
+})->middleware(['auth', 'role:admin,superadmin'])->name('employees.edit');
 
 Route::put('employees/{employee}', function (App\Models\Employee $employee, Request $request) {
     $validated = $request->validate([
@@ -129,7 +129,7 @@ Route::put('employees/{employee}', function (App\Models\Employee $employee, Requ
     }
 
     return redirect()->route('dashboard')->with('success', 'Employee updated successfully.');
-})->middleware(['auth', 'role:admin'])->name('employees.update');
+})->middleware(['auth', 'role:admin,superadmin'])->name('employees.update');
 
 Route::get('employees/{employee}/attendance', function (App\Models\Employee $employee, Request $request) {
     $month = intval($request->query('month', Carbon::now()->month));

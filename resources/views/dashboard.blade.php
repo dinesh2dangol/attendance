@@ -254,13 +254,10 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>User ID</th>
                                     <th>Name</th>
                                     <th>Join Date (ENG)</th>
-                                    <th>Status</th>
+                                    <th>Email</th>
                                     <th>Dept</th>
-                                    <th>Gender</th>
                                     @if ($showTodayPunches)
                                         <th>Today's Punches ({{ now()->format('Y-m-d') }})</th>
                                     @endif
@@ -280,13 +277,10 @@
                                         $todayPunches = $showTodayPunches ? ($todayPunchesByUser[$employee->user_id] ?? null) : null;
                                     @endphp
                                     <tr>
-                                        <td>{{ $employee->id }}</td>
-                                        <td>{{ $employee->user_id }}</td>
                                         <td>{{ $employee->employee_name }}</td>
                                         <td>{{ optional($employee->join_date_eng)->format('Y-m-d') }}</td>
-                                        <td>{{ $employee->status }}</td>
+                                        <td>{{ $employee->account?->email ?? 'Not configured' }}</td>
                                         <td>{{ $employee->department?->department_name ?? $employee->department_id }}</td>
-                                        <td>{{ $employee->gender }}</td>
                                         @if ($showTodayPunches)
                                             <td>
                                                 In: {{ $todayPunches?->first_punch ?? '-' }}<br>
@@ -309,7 +303,7 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td colspan="{{ $showTodayPunches ? 9 : 8 }}">
+                                        <td colspan="{{ $showTodayPunches ? 6 : 5 }}">
                                             <details class="date-section">
                                                 <summary><strong>Absent Dates:</strong> {{ $totalAbsentDates }}</summary>
                                                 @if (!empty($absentDates))
@@ -390,7 +384,7 @@
                                         <div class="mobile-meta">
                                             <div><span class="detail-label">Name</span><strong>{{ $employee->employee_name }}</strong></div>
                                             <div><span class="detail-label">Department</span><strong>{{ $employee->department?->department_name ?? $employee->department_id }}</strong></div>
-                                            <div><span class="detail-label">Status</span><strong>{{ $employee->status }}</strong></div>
+                                            <div><span class="detail-label">Email</span><strong>{{ $employee->account?->email ?? 'Not configured' }}</strong></div>
                                             @if ($showTodayPunches)
                                                 <div>
                                                     <span class="detail-label">Today's Punches ({{ now()->format('Y-m-d') }})</span>

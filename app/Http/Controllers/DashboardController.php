@@ -57,7 +57,7 @@ class DashboardController extends Controller
             $query->where('status', $status);
         }
 
-        $employees = $query->with('department')->paginate($perPage)->withQueryString();
+        $employees = $query->with(['department', 'account'])->paginate($perPage)->withQueryString();
         $currentYear = Carbon::now()->year;
         $showTodayPunches = $isSuperadmin;
         $todayPunchesByUser = $showTodayPunches
