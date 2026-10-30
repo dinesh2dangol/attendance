@@ -66,6 +66,6 @@ class EmployeePortalController extends Controller
             'pendingWfhDates',
             'manualAttendanceByDate',
             'year'
-        ) + $yearlySummary);
+        ) + $yearlySummary + ['isOwnAttendance' => true]);
     }
 }

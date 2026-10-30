@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Leave;
 use App\Models\Employee;
+use App\Support\SupervisorGroupAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -35,7 +36,7 @@ class LeaveController extends Controller
         $userId = $request->query('user_id');
         $filterEmployee = null;
 
-        if (Auth::user()?->role?->slug === 'employee') {
+        if ($this->isSelfServiceUser()) {
             $userId = Auth::user()->employee?->user_id;
             abort_unless($userId, 403, 'Your account is not linked to an employee record.');
         }
@@ -52,7 +53,7 @@ class LeaveController extends Controller
 
     public function create(Request $request)
     {
-        if (Auth::user()?->role?->slug === 'employee' && ! Auth::user()->employee) {
+        if ($this->isSelfServiceUser() && ! Auth::user()->employee) {
             abort(403, 'Your account is not linked to an employee record.');
         }
 
@@ -68,7 +69,7 @@ class LeaveController extends Controller
 
     public function store(Request $request)
     {
-        $isEmployee = Auth::user()?->role?->slug === 'employee';
+        $isEmployee = $this->isSelfServiceUser();
         $employeeUserId = Auth::user()?->employee?->user_id;
 
         $userIdForRule = $isEmployee ? $employeeUserId : $request->input('user_id');
@@ -111,7 +112,7 @@ class LeaveController extends Controller
         }
 
         // If current user is an employee, ensure they own this leave
-        if (Auth::user()?->role?->slug === 'employee') {
+        if ($this->isSelfServiceUser()) {
             $employeeUserId = Auth::user()->employee?->user_id;
             if (! $employeeUserId || $leave->user_id !== $employeeUserId) {
                 abort(403, 'You are not authorized to edit this leave.');
@@ -133,13 +134,13 @@ class LeaveController extends Controller
             return redirect()->route('leaves.index', ['user_id' => $leave->user_id])->with('error', 'Approved leaves cannot be edited.');
         }
         // If current user is an employee, ensure they own this leave
-        if (Auth::user()?->role?->slug === 'employee') {
+        if ($this->isSelfServiceUser()) {
             $employeeUserId = Auth::user()->employee?->user_id;
             if (! $employeeUserId || $leave->user_id !== $employeeUserId) {
                 abort(403, 'You are not authorized to update this leave.');
             }
         }
-        $isEmployee = Auth::user()?->role?->slug === 'employee';
+        $isEmployee = $this->isSelfServiceUser();
 
         $userIdForRule = $request->input('user_id') ?? $leave->user_id;
         $leaveDateRules = [
@@ -155,7 +156,7 @@ class LeaveController extends Controller
         }
 
         $validated = $request->validate([
-            'user_id' => ['nullable', 'string', 'exists:employees,user_id'],
+            'user_id' => [$isEmployee ? 'prohibited' : 'nullable', 'string', 'exists:employees,user_id'],
             'leave_date' => $leaveDateRules,
             'leave_type' => ['required', 'string', 'max:50'],
             'leave_description' => ['nullable', 'string', 'max:255'],
@@ -164,6 +165,9 @@ class LeaveController extends Controller
             'leave_date.after_or_equal' => 'You cannot set a past date.',
         ]);
         $this->ensureNoWfhConflict($userIdForRule, $validated['leave_date']);
+        if ($isEmployee) {
+            $validated['user_id'] = $leave->user_id;
+        }
 
         $leave->update($validated);
 
@@ -175,8 +179,19 @@ class LeaveController extends Controller
         $userId = $request->query('user_id');
         $month = intval($request->query('month', Carbon::now()->month));
         $year = intval($request->query('year', Carbon::now()->year));
+        $isSupervisor = $request->user()->role?->slug === 'supervisor';
+        $groupMemberUserIds = $isSupervisor
+            ? SupervisorGroupAccess::memberUserIds($request->user())
+            : null;
 
-        $employees = Employee::orderBy('employee_name')->get();
+        if ($isSupervisor && $userId && ! in_array((string) $userId, $groupMemberUserIds, true)) {
+            abort(403);
+        }
+
+        $employees = Employee::when(
+            $isSupervisor,
+            fn ($query) => $query->whereIn('user_id', $groupMemberUserIds)
+        )->orderBy('employee_name')->get();
         $filterEmployee = null;
 
         if ($userId) {
@@ -185,6 +200,7 @@ class LeaveController extends Controller
 
         $absentCount = DB::table('daily_attendance_step3')
             ->when($userId, fn($q) => $q->where('daily_attendance_step3.user_id', $userId))
+            ->when($isSupervisor, fn ($q) => $q->whereIn('daily_attendance_step3.user_id', $groupMemberUserIds))
             ->join('employees', 'employees.user_id', '=', 'daily_attendance_step3.user_id')
             ->whereYear('daily_attendance_step3.attendance_date', $year)
             ->whereMonth('daily_attendance_step3.attendance_date', $month)
@@ -196,18 +212,21 @@ class LeaveController extends Controller
             ->count();
 
         $totalLeaves = Leave::when($userId, fn($q) => $q->where('user_id', $userId))
+            ->when($isSupervisor, fn ($q) => $q->whereIn('user_id', $groupMemberUserIds))
             ->whereYear('leave_date', $year)
             ->whereMonth('leave_date', $month)
             ->count();
 
         $pendingLeaves = Leave::with('employee')
             ->when($userId, fn($q) => $q->where('user_id', $userId))
+            ->when($isSupervisor, fn ($q) => $q->whereIn('user_id', $groupMemberUserIds))
             ->where('approval_status', 0)
             ->orderBy('leave_date', 'desc')
             ->get();
 
         $approvedLeaves = Leave::with('employee')
             ->when($userId, fn($q) => $q->where('user_id', $userId))
+            ->when($isSupervisor, fn ($q) => $q->whereIn('user_id', $groupMemberUserIds))
             ->where('approval_status', 1)
             ->orderBy('leave_date', 'desc')
             ->get();
@@ -231,14 +250,29 @@ class LeaveController extends Controller
         }
     }
 
-    public function approve(Leave $leave)
+    public function approve(Leave $leave, Request $request)
     {
+        if ($request->user()->role?->slug === 'supervisor') {
+            abort_unless(SupervisorGroupAccess::canReview($request->user(), $leave->user_id), 403);
+        }
+
         if ($leave->approval_status !== 0) {
             return redirect()->route('leaves.index', ['user_id' => $leave->user_id])->with('error', 'Leave is already approved.');
         }
 
-        $leave->update(['approval_status' => 1]);
+        $updated = Leave::whereKey($leave->leave_id)
+            ->where('approval_status', 0)
+            ->update(['approval_status' => 1]);
+
+        if (! $updated) {
+            return redirect()->route('leaves.approval')->with('error', 'Leave is already approved.');
+        }
 
         return redirect()->route('leaves.approval', ['user_id' => $leave->user_id])->with('success', 'Leave approved successfully.');
+    }
+
+    private function isSelfServiceUser(): bool
+    {
+        return in_array(Auth::user()?->role?->slug, ['employee', 'supervisor'], true);
     }
 }

@@ -26,26 +26,28 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('leaves.update', $leave) }}">
+        <form method="POST" action="{{ in_array(auth()->user()->role?->slug, ['employee', 'supervisor'], true) ? route('employee.leaves.update', $leave) : route('leaves.update', $leave) }}">
             @csrf
             @method('PUT')
 
-            <div class="field">
-                <label for="employee_id">Employee (optional)</label>
-                <select name="user_id" id="user_id">
-                    <option value="">-- Select --</option>
-                    @foreach($employees as $emp)
-                        <option value="{{ $emp->user_id }}" {{ (string)$leave->user_id === (string)$emp->user_id ? 'selected' : '' }}>
-                            {{ $emp->employee_name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+            @if (! in_array(auth()->user()->role?->slug, ['employee', 'supervisor'], true))
+                <div class="field">
+                    <label for="employee_id">Employee (optional)</label>
+                    <select name="user_id" id="user_id">
+                        <option value="">-- Select --</option>
+                        @foreach($employees as $emp)
+                            <option value="{{ $emp->user_id }}" {{ (string)$leave->user_id === (string)$emp->user_id ? 'selected' : '' }}>
+                                {{ $emp->employee_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
 
             <div class="field">
                 <label for="leave_date">Date</label>
                 <input id="leave_date" name="leave_date" type="date" value="{{ $leave->leave_date?->format('Y-m-d') }}" required
-                    @if(auth()->user()?->role?->slug === 'employee') min="{{ \Carbon\Carbon::now()->format('Y-m-d') }}" @endif />
+                    @if(in_array(auth()->user()?->role?->slug, ['employee', 'supervisor'], true)) min="{{ \Carbon\Carbon::now()->format('Y-m-d') }}" @endif />
             </div>
 
             <div class="field">
@@ -65,7 +67,7 @@
 
             <div style="display:flex;gap:0.5rem">
                 <button class="button" type="submit">Save Changes</button>
-                @if(auth()->user()?->role?->slug === 'employee')
+                @if(in_array(auth()->user()?->role?->slug, ['employee', 'supervisor'], true))
                     <a href="{{ route('employee.leaves.index') }}" style="align-self:center;">Cancel</a>
                 @else
                     @if(request()->query('back'))

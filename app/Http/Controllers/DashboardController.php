@@ -12,7 +12,7 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        if ($request->user()->role?->slug === 'employee') {
+        if (in_array($request->user()->role?->slug, ['employee', 'supervisor'], true)) {
             return redirect()->route('employee.attendance.self');
         }
 

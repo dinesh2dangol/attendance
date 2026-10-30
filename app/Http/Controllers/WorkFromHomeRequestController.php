@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\WorkFromHomeRequest;
 use App\Models\Employee;
+use App\Support\SupervisorGroupAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -12,27 +13,34 @@ class WorkFromHomeRequestController extends Controller
 {
     public function index(Request $request)
     {
+        $role = $request->user()->role?->slug;
+        $isOwnRequestList = in_array($role, ['employee', 'supervisor'], true)
+            && $request->route()->getName() === 'employee.wfh.index';
+        $reviewableUserIds = null;
         $query = WorkFromHomeRequest::with('employee')
             ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
             ->orderByDesc('created_at');
 
-        if ($request->user()->role?->slug === 'employee') {
+        if ($role === 'employee' || ($role === 'supervisor' && $isOwnRequestList)) {
             $employee = $request->user()->employee;
             abort_unless($employee, 403, 'Your account is not linked to an employee record.');
             $query->where('user_id', $employee->user_id);
+        } elseif ($role === 'supervisor') {
+            $reviewableUserIds = SupervisorGroupAccess::memberUserIds($request->user());
+            $query->whereIn('user_id', $reviewableUserIds);
         }
 
         $requests = $query->paginate(20)->withQueryString();
 
-        return view('work-from-home.index', compact('requests'));
+        return view('work-from-home.index', compact('requests', 'isOwnRequestList', 'reviewableUserIds'));
     }
 
     public function create(Request $request)
     {
         $role = $request->user()->role?->slug;
-        abort_unless(in_array($role, ['employee', 'superadmin'], true), 403);
+        abort_unless(in_array($role, ['employee', 'supervisor', 'superadmin'], true), 403);
 
-        if ($role === 'employee') {
+        if (in_array($role, ['employee', 'supervisor'], true)) {
             abort_unless($request->user()->employee, 403, 'Your account is not linked to an employee record.');
 
             return view('work-from-home.create');
@@ -49,7 +57,7 @@ class WorkFromHomeRequestController extends Controller
     public function store(Request $request)
     {
         $role = $request->user()->role?->slug;
-        $isEmployee = $role === 'employee';
+        $isEmployee = in_array($role, ['employee', 'supervisor'], true);
         $isSuperadmin = $role === 'superadmin';
         abort_unless($isEmployee || $isSuperadmin, 403);
 
@@ -113,17 +121,27 @@ class WorkFromHomeRequestController extends Controller
 
     private function review(WorkFromHomeRequest $wfhRequest, Request $request, string $status)
     {
-        abort_unless(in_array($request->user()->role?->slug, ['admin', 'superadmin'], true), 403);
+        $role = $request->user()->role?->slug;
+        abort_unless(in_array($role, ['admin', 'superadmin', 'supervisor'], true), 403);
+        if ($role === 'supervisor') {
+            abort_unless(SupervisorGroupAccess::canReview($request->user(), $wfhRequest->user_id), 403);
+        }
 
         if ($wfhRequest->status !== 'pending') {
             return redirect()->route('wfh-requests.index')->with('error', 'This WFH request has already been reviewed.');
         }
 
-        $wfhRequest->update([
+        $updated = WorkFromHomeRequest::whereKey($wfhRequest->id)
+            ->where('status', 'pending')
+            ->update([
             'status' => $status,
             'reviewed_by' => $request->user()->id,
             'reviewed_at' => now(),
+            'updated_at' => now(),
         ]);
+        if (! $updated) {
+            return redirect()->route('wfh-requests.index')->with('error', 'This WFH request has already been reviewed.');
+        }
 
         return redirect()->route('wfh-requests.index')->with(
             'success',

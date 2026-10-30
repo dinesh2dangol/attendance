@@ -201,7 +201,12 @@
                 <button class="button" type="submit">Log out</button>
             </form>
         </div>
-        <p><a class="button button-secondary" href="{{ route('wfh-requests.index') }}">WFH Requests</a></p>
+        <p>
+            <a class="button button-secondary" href="{{ route('wfh-requests.index') }}">WFH Requests</a>
+            @if (auth()->user()->role?->slug === 'superadmin')
+                <a class="button button-secondary" href="{{ route('employee-groups.index') }}">Employee Groups</a>
+            @endif
+        </p>
 
         {{-- Manage Employee Logins disabled temporarily --}}
 

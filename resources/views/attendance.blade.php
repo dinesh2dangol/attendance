@@ -79,11 +79,18 @@
                 <p>Department: {{ $employee->department?->department_name ?? 'N/A' }}</p>
             </div>
             <div style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center;">
-                @if (auth()->user()->role?->slug === 'employee')
+                @if ($isOwnAttendance)
                     <a class="button button-secondary" href="{{ route('employee.leaves.index') }}">My Leaves</a>
                     <a class="button button-secondary" href="{{ route('employee.wfh.index') }}">My WFH Requests</a>
+                    @if (auth()->user()->role?->slug === 'supervisor')
+                        <a class="button button-secondary" href="{{ route('leaves.approval') }}">Team Leave Approvals</a>
+                        <a class="button button-secondary" href="{{ route('wfh-requests.index') }}">Team WFH Requests</a>
+                    @endif
+                @elseif (auth()->user()->role?->slug === 'supervisor')
+                    <a class="button button-secondary" href="{{ route('leaves.approval') }}">Team Leave Approvals</a>
+                    <a class="button button-secondary" href="{{ route('wfh-requests.index') }}">Team WFH Requests</a>
                 @endif
-                @if (auth()->user()?->role?->slug !== 'employee')
+                @if (! $isOwnAttendance && auth()->user()?->role?->slug !== 'supervisor')
                     @if(request()->query('back'))
                         @php parse_str(request()->query('back'), $backParams); @endphp
                         <a class="button button-secondary" href="{{ route('dashboard', $backParams) }}">Dashboard</a>
@@ -105,7 +112,7 @@
                         <p class="calendar-title">Monthly Attendance</p>
                         <p class="calendar-subtitle">{{ $monthStart->format('F Y') }} for {{ $employee->employee_name }}</p>
                     </div>
-                    <form method="GET" action="{{ auth()->user()->role?->slug === 'employee' ? route('employee.attendance.self') : route('employee.attendance', $employee) }}" class="calendar-actions">
+                    <form method="GET" action="{{ $isOwnAttendance ? route('employee.attendance.self') : route('employee.attendance', $employee) }}" class="calendar-actions">
                         <label>
                             Month
                             <select name="month" onchange="this.form.submit()">
@@ -121,7 +128,7 @@
                         </label>
                         @if ($monthStart->month === 1)
                             <span class="button button-secondary disabled">Previous Month</span>
-                        @elseif (auth()->user()->role?->slug === 'employee')
+                        @elseif ($isOwnAttendance)
                             <a class="button button-secondary" href="{{ route('employee.attendance.self', ['month' => $monthStart->month - 1, 'year' => $monthStart->year]) }}">Previous Month</a>
                         @else
                             <a class="button button-secondary" href="{{ route('employee.attendance', ['employee' => $employee, 'month' => $monthStart->month - 1, 'year' => $monthStart->year]) }}">Previous Month</a>
@@ -160,7 +167,7 @@
                                                 ? (($item['type'] ? ' (' . $item['type'] . ')' : '') . ($item['pending'] ? ' (P)' : ''))
                                                 : '';
                                         @endphp
-                                        @if (auth()->user()->role?->slug === 'employee')
+                                        @if ($isOwnAttendance)
                                             <a href="{{ route('employee.attendance.self', ['month' => $dateValue->month, 'year' => $dateValue->year]) }}">{{ $date }}{{ $suffix }}</a>
                                         @else
                                             <a href="{{ route('employee.attendance', array_merge(['employee' => $employee, 'month' => $dateValue->month, 'year' => $dateValue->year], ['back' => request()->query('back')])) }}">{{ $date }}{{ $suffix }}</a>

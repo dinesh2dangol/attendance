@@ -36,7 +36,9 @@ class EmployeeAccountController extends Controller
         $account->name = $employee->employee_name;
         $account->email = $validated['email'];
         $account->password = Hash::make($temporaryPassword);
-        $account->role_id = Role::where('slug', 'employee')->value('id');
+        if ($account->role?->slug !== 'supervisor') {
+            $account->role_id = Role::where('slug', 'employee')->value('id');
+        }
         $account->save();
 
         return redirect()->route('employee-accounts.index')->with('credentials', [

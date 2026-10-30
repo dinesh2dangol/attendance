@@ -29,9 +29,12 @@
                 @endif
             </div>
             <div style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center;">
-                @if (auth()->user()->role?->slug === 'employee')
+                @if (in_array(auth()->user()->role?->slug, ['employee', 'supervisor'], true))
                     <a href="{{ route('employee.attendance.self') }}" class="button button-secondary">My Attendance</a>
                     <a href="{{ route('employee.leaves.create') }}" class="button">Apply Leave</a>
+                    @if (auth()->user()->role?->slug === 'supervisor')
+                        <a href="{{ route('leaves.approval') }}" class="button button-secondary">Team Leave Approvals</a>
+                    @endif
                 @else
                     @if(request()->query('back'))
                         @php parse_str(request()->query('back'), $backParams); @endphp
@@ -74,7 +77,7 @@
                                 <td>{{ $leave->approval_status }}</td>
                                 <td>
                                     @if($leave->employee && $leave->leave_date)
-                                        @if(auth()->user()?->role?->slug === 'employee')
+                                        @if(in_array(auth()->user()?->role?->slug, ['employee', 'supervisor'], true))
                                             <a href="{{ route('employee.attendance.self', ['month' => $leave->leave_date->month, 'year' => $leave->leave_date->year]) }}">Attendance</a>
                                         @else
                                             <a href="{{ route('employee.attendance', ['employee' => $leave->employee, 'month' => $leave->leave_date->month, 'year' => $leave->leave_date->year]) }}">Attendance</a>
@@ -82,7 +85,7 @@
                                         @if($leave->approval_status === 0) | @endif
                                     @endif
                                     @if($leave->approval_status === 0)
-                                        @if(auth()->user()?->role?->slug === 'employee')
+                                        @if(in_array(auth()->user()?->role?->slug, ['employee', 'supervisor'], true))
                                             <a href="{{ route('employee.leaves.edit', $leave) }}">Edit</a>
                                         @else
                                             <a href="{{ route('leaves.edit', $leave) }}">Edit</a>

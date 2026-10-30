@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeePortalController;
+use App\Http\Controllers\EmployeeGroupController;
 use App\Http\Controllers\EmployeeAccountController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\ManualAttendanceController;
@@ -21,6 +22,7 @@ use App\Support\HolidayCalendar;
 use App\Support\ManualAttendanceCategories;
 use App\Support\YearlyAttendanceSummary;
 use App\Support\WorkFromHomeCalendar;
+use App\Support\SupervisorGroupAccess;
 
 Route::get('/', function () {
     return view('welcome');
@@ -49,7 +51,7 @@ Route::middleware('guest')->group(function () {
 
         $request->session()->regenerate();
 
-        return Auth::user()->role?->slug === 'employee'
+        return in_array(Auth::user()->role?->slug, ['employee', 'supervisor'], true)
             ? redirect()->route('employee.attendance.self')
             : redirect()->route('dashboard');
     });
@@ -110,7 +112,9 @@ Route::put('employees/{employee}', function (App\Models\Employee $employee, Requ
         $account = $employee->account ?: new User(['employee_id' => $employee->id]);
         $account->name = $employee->employee_name;
         $account->email = $validated['account_email'];
-        $account->role_id = \App\Models\Role::where('slug', 'employee')->value('id');
+        if ($account->role?->slug !== 'supervisor') {
+            $account->role_id = \App\Models\Role::where('slug', 'employee')->value('id');
+        }
 
         if ($request->filled('account_password')) {
             $account->password = Hash::make($validated['account_password']);
@@ -134,6 +138,10 @@ Route::put('employees/{employee}', function (App\Models\Employee $employee, Requ
 })->middleware(['auth', 'role:admin,superadmin'])->name('employees.update');
 
 Route::get('employees/{employee}/attendance', function (App\Models\Employee $employee, Request $request) {
+    if ($request->user()->role?->slug === 'supervisor') {
+        abort_unless(SupervisorGroupAccess::canReview($request->user(), $employee->user_id), 403);
+    }
+
     $month = intval($request->query('month', Carbon::now()->month));
     $year = intval($request->query('year', Carbon::now()->year));
     $monthStart = Carbon::create($year, $month, 1)->startOfMonth();
@@ -187,33 +195,40 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
         'pendingWfhDates',
         'manualAttendanceByDate',
         'year'
-    ) + $yearlySummary);
-})->middleware(['auth', 'role:admin,superadmin'])->name('employee.attendance');
+    ) + $yearlySummary + ['isOwnAttendance' => false]);
+})->middleware(['auth', 'role:admin,superadmin,supervisor'])->name('employee.attendance');
 
 Route::middleware('auth')->group(function () {
     Route::middleware('role:superadmin')->group(function () {
+        Route::get('employee-groups', [EmployeeGroupController::class, 'index'])->name('employee-groups.index');
+        Route::get('employee-groups/create', [EmployeeGroupController::class, 'create'])->name('employee-groups.create');
+        Route::post('employee-groups', [EmployeeGroupController::class, 'store'])->name('employee-groups.store');
+        Route::get('employee-groups/{employeeGroup}/edit', [EmployeeGroupController::class, 'edit'])->name('employee-groups.edit');
+        Route::put('employee-groups/{employeeGroup}', [EmployeeGroupController::class, 'update'])->name('employee-groups.update');
         Route::get('wfh-requests/create', [WorkFromHomeRequestController::class, 'create'])->name('wfh-requests.create');
         Route::post('wfh-requests', [WorkFromHomeRequestController::class, 'store'])->name('wfh-requests.store');
     });
 
-    Route::middleware('role:admin,superadmin')->group(function () {
+    Route::middleware('role:admin,superadmin,supervisor')->group(function () {
         Route::get('leaves', [LeaveController::class, 'index'])->name('leaves.index');
-        Route::get('leaves/create', [LeaveController::class, 'create'])->name('leaves.create');
-        Route::post('leaves', [LeaveController::class, 'store'])->name('leaves.store');
-        Route::get('leaves/{leave}/edit', [LeaveController::class, 'edit'])->name('leaves.edit');
-        Route::put('leaves/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
         Route::get('leaves/approval', [LeaveController::class, 'approval'])->name('leaves.approval');
         Route::post('leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve');
         Route::get('wfh-requests', [WorkFromHomeRequestController::class, 'index'])->name('wfh-requests.index');
         Route::post('wfh-requests/{workFromHomeRequest}/approve', [WorkFromHomeRequestController::class, 'approve'])->name('wfh-requests.approve');
         Route::post('wfh-requests/{workFromHomeRequest}/reject', [WorkFromHomeRequestController::class, 'reject'])->name('wfh-requests.reject');
+    });
 
+    Route::middleware('role:admin,superadmin')->group(function () {
+        Route::get('leaves/create', [LeaveController::class, 'create'])->name('leaves.create');
+        Route::post('leaves', [LeaveController::class, 'store'])->name('leaves.store');
+        Route::get('leaves/{leave}/edit', [LeaveController::class, 'edit'])->name('leaves.edit');
+        Route::put('leaves/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
         Route::get('manual-attendance/create', [ManualAttendanceController::class, 'create'])->name('manual-attendance.create');
         Route::post('manual-attendance', [ManualAttendanceController::class, 'store'])->name('manual-attendance.store');
     });
 });
 
-Route::middleware(['auth', 'role:employee'])->group(function () {
+Route::middleware(['auth', 'role:employee,supervisor'])->group(function () {
     Route::get('my-attendance', [EmployeePortalController::class, 'attendance'])->name('employee.attendance.self');
     Route::get('my-leaves', [LeaveController::class, 'index'])->name('employee.leaves.index');
     Route::get('my-leaves/create', [LeaveController::class, 'create'])->name('employee.leaves.create');

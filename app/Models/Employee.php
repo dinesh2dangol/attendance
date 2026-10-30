@@ -46,4 +46,14 @@ class Employee extends Model
     {
         return $this->hasOne(User::class, 'employee_id', 'id');
     }
+
+    public function groups()
+    {
+        return $this->belongsToMany(EmployeeGroup::class, 'employee_group_members');
+    }
+
+    public function supervisedGroup()
+    {
+        return $this->hasOne(EmployeeGroup::class, 'supervisor_employee_id');
+    }
 }

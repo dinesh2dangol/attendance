@@ -29,14 +29,17 @@
         <div class="toolbar">
             <div>
                 <h1>Work From Home Requests</h1>
-                <p>{{ auth()->user()->role?->slug === 'employee' ? 'Track your requests and their approval status.' : 'Review employee WFH requests.' }}</p>
+                <p>{{ $isOwnRequestList ? 'Track your requests and their approval status.' : 'Review employee WFH requests.' }}</p>
             </div>
             <div class="actions">
-                @if (auth()->user()->role?->slug === 'employee')
+                @if ($isOwnRequestList)
                     <a class="button button-secondary" href="{{ route('employee.attendance.self') }}">My Attendance</a>
                     <a class="button" href="{{ route('employee.wfh.create') }}">Request WFH</a>
                 @else
                     <a class="button button-secondary" href="{{ route('dashboard') }}">Dashboard</a>
+                    @if (auth()->user()->role?->slug === 'supervisor')
+                        <a class="button button-secondary" href="{{ route('employee.wfh.index') }}">My WFH Requests</a>
+                    @endif
                     @if (auth()->user()->role?->slug === 'superadmin')
                         <a class="button" href="{{ route('wfh-requests.create') }}">Apply for Employee</a>
                     @endif
@@ -58,13 +61,13 @@
                 <table>
                     <thead>
                         <tr>
-                            @if (auth()->user()->role?->slug !== 'employee')
+                            @if (! $isOwnRequestList)
                                 <th>Employee</th>
                             @endif
                             <th>Dates</th>
                             <th>Reason</th>
                             <th>Status</th>
-                            @if (auth()->user()->role?->slug !== 'employee')
+                            @if (! $isOwnRequestList)
                                 <th>Action</th>
                             @endif
                         </tr>
@@ -72,15 +75,15 @@
                     <tbody>
                         @foreach ($requests as $wfhRequest)
                             <tr>
-                                @if (auth()->user()->role?->slug !== 'employee')
+                                @if (! $isOwnRequestList)
                                     <td>{{ $wfhRequest->employee?->employee_name ?? $wfhRequest->user_id }}</td>
                                 @endif
                                 <td>{{ $wfhRequest->start_date->format('Y-m-d') }} - {{ $wfhRequest->end_date->format('Y-m-d') }}</td>
                                 <td>{{ $wfhRequest->reason }}</td>
                                 <td>{{ ucfirst($wfhRequest->status) }}</td>
-                                @if (auth()->user()->role?->slug !== 'employee')
+                                @if (! $isOwnRequestList)
                                     <td>
-                                        @if ($wfhRequest->status === 'pending')
+                                        @if ($wfhRequest->status === 'pending' && (in_array(auth()->user()->role?->slug, ['admin', 'superadmin'], true) || in_array((string) $wfhRequest->user_id, $reviewableUserIds ?? [], true)))
                                             <div class="actions">
                                                 <form method="POST" action="{{ route('wfh-requests.approve', $wfhRequest) }}">
                                                     @csrf
