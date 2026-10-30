@@ -174,10 +174,10 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
         'manualAttendanceByDate',
         'year'
     ) + $yearlySummary);
-})->middleware(['auth', 'role:admin'])->name('employee.attendance');
+})->middleware(['auth', 'role:admin,superadmin'])->name('employee.attendance');
 
 Route::middleware('auth')->group(function () {
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware('role:admin,superadmin')->group(function () {
         Route::get('leaves', [LeaveController::class, 'index'])->name('leaves.index');
         Route::get('leaves/create', [LeaveController::class, 'create'])->name('leaves.create');
         Route::post('leaves', [LeaveController::class, 'store'])->name('leaves.store');
