@@ -11,6 +11,7 @@
         input,select { padding:.65rem; border:1px solid #d1d5db; border-radius:.5rem; }
         .members { max-height:20rem; overflow:auto; border:1px solid #d1d5db; border-radius:.5rem; padding:.5rem; }
         .member { display:flex; align-items:center; gap:.5rem; padding:.35rem; }
+        .member[hidden] { display:none; }
         .member input { padding:0; }
         .button { display:inline-block; padding:.65rem .9rem; border:0; border-radius:.5rem; background:#111827; color:white; text-decoration:none; cursor:pointer; }
         .secondary { background:#e2e8f0; color:#111827; }
@@ -36,21 +37,40 @@
             </div>
             <div class="field">
                 <label for="supervisor_employee_id">Supervisor</label>
-                <select id="supervisor_employee_id" name="supervisor_employee_id" required>
-                    <option value="">Select supervisor</option>
+                @php
+                    $selectedSupervisorId = old('supervisor_employee_id', $employeeGroup->supervisor_employee_id ?? '');
+                    $selectedSupervisor = $supervisors->firstWhere('id', (int) $selectedSupervisorId);
+                @endphp
+                <input
+                    id="supervisor_search"
+                    type="search"
+                    list="supervisor_suggestions"
+                    value="{{ $selectedSupervisor ? $selectedSupervisor->employee_name . ' (' . $selectedSupervisor->account?->email . ')' : '' }}"
+                    placeholder="Type a name or email to find a supervisor"
+                    autocomplete="off"
+                    required
+                >
+                <input id="supervisor_employee_id" name="supervisor_employee_id" type="hidden" value="{{ $selectedSupervisorId }}">
+                <datalist id="supervisor_suggestions">
                     @foreach ($supervisors as $supervisor)
-                        <option value="{{ $supervisor->id }}" @selected((string) old('supervisor_employee_id', $employeeGroup->supervisor_employee_id ?? '') === (string) $supervisor->id)>
-                            {{ $supervisor->employee_name }} ({{ $supervisor->account?->email }})
+                        <option value="{{ $supervisor->employee_name }} ({{ $supervisor->account?->email }})" data-id="{{ $supervisor->id }}">
                         </option>
                     @endforeach
-                </select>
+                </datalist>
                 @if ($supervisors->isEmpty())
                     <small>No eligible supervisor accounts. Create an employee login first.</small>
+                @else
+                    <small>Type a name or email, then select a matching suggestion.</small>
                 @endif
             </div>
             <div class="field">
                 <label>Regular employees</label>
-                <input id="member_search" type="search" placeholder="Search employees">
+                <input id="member_search" type="search" list="member_suggestions" placeholder="Type a name or email to filter employees" autocomplete="off">
+                <datalist id="member_suggestions">
+                    @foreach ($members as $member)
+                        <option value="{{ $member->employee_name }} ({{ $member->account?->email }})"></option>
+                    @endforeach
+                </datalist>
                 <div class="members" id="members">
                     @foreach ($members as $member)
                         <label class="member" data-name="{{ strtolower($member->employee_name . ' ' . $member->account?->email) }}">
@@ -70,10 +90,26 @@
     </main>
     <script>
         const memberSearch = document.getElementById('member_search');
+        const supervisorSearch = document.getElementById('supervisor_search');
+        const supervisorId = document.getElementById('supervisor_employee_id');
+        const supervisorOptions = Array.from(document.querySelectorAll('#supervisor_suggestions option'));
+
+        const updateSupervisor = () => {
+            const selected = supervisorOptions.find(option => option.value === supervisorSearch.value);
+            supervisorId.value = selected?.dataset.id ?? '';
+            supervisorSearch.setCustomValidity(
+                supervisorSearch.value !== '' && !selected
+                    ? 'Select a supervisor from the suggestions.'
+                    : ''
+            );
+        };
+
+        supervisorSearch.addEventListener('input', updateSupervisor);
+        supervisorSearch.form.addEventListener('submit', updateSupervisor);
         memberSearch.addEventListener('input', () => {
             const query = memberSearch.value.trim().toLowerCase();
-            document.querySelectorAll('#members .member').forEach(member => {
-                member.hidden = !member.dataset.name.includes(query);
+            document.querySelectorAll('#members .member').forEach(row => {
+                row.hidden = !row.dataset.name.includes(query);
             });
         });
     </script>

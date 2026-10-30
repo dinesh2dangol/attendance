@@ -110,12 +110,15 @@ class EmployeeGroupController extends Controller
 
         $validMemberCount = Employee::query()
             ->whereKey($members)
-            ->whereHas('account.role', fn ($query) => $query->where('slug', 'employee'))
+            ->where(function ($query) {
+                $query->whereDoesntHave('account')
+                    ->orWhereHas('account.role', fn ($query) => $query->where('slug', 'employee'));
+            })
             ->count();
 
         if ($validMemberCount !== $members->unique()->count()) {
             throw ValidationException::withMessages([
-                'members' => 'Group members must have regular employee accounts.',
+                'members' => 'Group members must be regular employees.',
             ]);
         }
 
@@ -129,14 +132,17 @@ class EmployeeGroupController extends Controller
             ->where(function ($query) use ($group) {
                 $query->whereDoesntHave('supervisedGroup');
                 if ($group) {
-                    $query->orWhereKey($group->supervisor_employee_id);
+                    $query->orWhere('employees.id', $group->supervisor_employee_id);
                 }
             })
             ->with('account')
             ->orderBy('employee_name')
             ->get();
         $members = Employee::query()
-            ->whereHas('account.role', fn ($query) => $query->where('slug', 'employee'))
+            ->where(function ($query) {
+                $query->whereDoesntHave('account')
+                    ->orWhereHas('account.role', fn ($query) => $query->where('slug', 'employee'));
+            })
             ->with('account')
             ->orderBy('employee_name')
             ->get();

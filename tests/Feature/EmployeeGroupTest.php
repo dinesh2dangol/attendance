@@ -72,6 +72,8 @@ class EmployeeGroupTest extends TestCase
         ])->assertRedirect(route('employee-groups.index'));
 
         $groupId = DB::table('employee_groups')->value('id');
+        $this->get(route('employee-groups.edit', $groupId))->assertOk();
+
         $this->put(route('employee-groups.update', $groupId), [
             'name' => 'Operations',
             'supervisor_employee_id' => $newSupervisor->id,
@@ -86,6 +88,34 @@ class EmployeeGroupTest extends TestCase
             'supervisor',
             $newSupervisor->account->fresh()->role->slug
         );
+    }
+
+    public function test_employees_without_login_accounts_are_available_as_group_members(): void
+    {
+        $this->createGroupSchema();
+        $superadmin = $this->createUser('superadmin', 'root');
+        $supervisor = $this->createEmployeeWithAccount(1, 'EMP-1', 'Supervisor');
+        $member = Employee::create([
+            'id' => 2,
+            'user_id' => 'EMP-2',
+            'employee_name' => 'Employee Without Login',
+        ]);
+
+        $this->actingAs($superadmin)
+            ->get(route('employee-groups.create'))
+            ->assertOk()
+            ->assertSee('Employee Without Login');
+
+        $this->post(route('employee-groups.store'), [
+            'name' => 'Operations',
+            'supervisor_employee_id' => $supervisor->id,
+            'members' => [$member->id],
+        ])->assertRedirect(route('employee-groups.index'));
+
+        $this->assertDatabaseHas('employee_group_members', [
+            'employee_group_id' => DB::table('employee_groups')->where('name', 'Operations')->value('id'),
+            'employee_id' => $member->id,
+        ]);
     }
 
     public function test_supervisor_can_approve_only_leave_requests_for_group_members(): void
