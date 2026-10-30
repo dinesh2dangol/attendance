@@ -7,19 +7,28 @@ use App\Models\User;
 
 class SupervisorGroupAccess
 {
-    public static function memberUserIds(User $supervisor): array
+    public static function members(User $supervisor)
     {
         $employeeId = $supervisor->employee?->id;
 
         if (! $employeeId) {
-            return [];
+            return collect();
         }
 
         return EmployeeGroup::query()
             ->where('supervisor_employee_id', $employeeId)
             ->with('members')
             ->get()
-            ->flatMap(fn ($group) => $group->members->pluck('user_id'))
+            ->flatMap(fn ($group) => $group->members)
+            ->unique('id')
+            ->sortBy('employee_name')
+            ->values();
+    }
+
+    public static function memberUserIds(User $supervisor): array
+    {
+        return self::members($supervisor)
+            ->pluck('user_id')
             ->filter()
             ->map(fn ($userId) => (string) $userId)
             ->unique()

@@ -239,3 +239,7 @@ Route::middleware(['auth', 'role:employee,supervisor'])->group(function () {
     Route::get('my-wfh-requests/create', [WorkFromHomeRequestController::class, 'create'])->name('employee.wfh.create');
     Route::post('my-wfh-requests', [WorkFromHomeRequestController::class, 'store'])->name('employee.wfh.store');
 });
+
+Route::get('team-attendance', [EmployeePortalController::class, 'teamAttendance'])
+    ->middleware(['auth', 'role:supervisor'])
+    ->name('employee.attendance.team');

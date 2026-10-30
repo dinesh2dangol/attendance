@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Support\SupervisorGroupAccess;
 use App\Support\HolidayCalendar;
 use App\Support\ManualAttendanceCategories;
 use App\Support\YearlyAttendanceSummary;
@@ -13,6 +14,13 @@ use Illuminate\Support\Facades\DB;
 
 class EmployeePortalController extends Controller
 {
+    public function teamAttendance(Request $request)
+    {
+        $members = SupervisorGroupAccess::members($request->user());
+
+        return view('employee.team-attendance', compact('members'));
+    }
+
     public function attendance(Request $request)
     {
         $employee = $request->user()->employee;

@@ -157,6 +157,31 @@ class EmployeeGroupTest extends TestCase
         $this->assertDatabaseHas('leaves', ['leave_id' => $otherLeaveId, 'approval_status' => 0]);
     }
 
+    public function test_supervisor_can_open_a_team_attendance_list_scoped_to_group_members(): void
+    {
+        $this->createGroupSchema();
+        $supervisor = $this->createEmployeeWithAccount(1, 'EMP-1', 'Supervisor', 'supervisor');
+        $member = $this->createEmployeeWithAccount(2, 'EMP-2', 'Group Member');
+        $other = $this->createEmployeeWithAccount(3, 'EMP-3', 'Other Employee');
+        $groupId = DB::table('employee_groups')->insertGetId([
+            'name' => 'Operations',
+            'supervisor_employee_id' => $supervisor->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('employee_group_members')->insert([
+            'employee_group_id' => $groupId,
+            'employee_id' => $member->id,
+        ]);
+
+        $this->actingAs($supervisor->account)
+            ->get(route('employee.attendance.team'))
+            ->assertOk()
+            ->assertSee('Group Member')
+            ->assertSee(route('employee.attendance', $member), false)
+            ->assertDontSee('Other Employee');
+    }
+
     public function test_supervisor_can_approve_only_wfh_requests_for_group_members(): void
     {
         $this->createGroupSchema();

@@ -83,6 +83,7 @@
                     <a class="button button-secondary" href="{{ route('employee.leaves.index') }}">My Leaves</a>
                     <a class="button button-secondary" href="{{ route('employee.wfh.index') }}">My WFH Requests</a>
                     @if (auth()->user()->role?->slug === 'supervisor')
+                        <a class="button button-secondary" href="{{ route('employee.attendance.team') }}">Team Attendance</a>
                         <a class="button button-secondary" href="{{ route('leaves.approval') }}">Team Leave Approvals</a>
                         <a class="button button-secondary" href="{{ route('wfh-requests.index') }}">Team WFH Requests</a>
                     @endif
