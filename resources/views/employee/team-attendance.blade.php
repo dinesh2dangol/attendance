@@ -24,7 +24,10 @@
                 <p>View attendance for employees assigned to your group or groups.</p>
             </div>
             <div>
+                <a class="button secondary" href="{{ route('employee.groups') }}">My Groups</a>
                 <a class="button secondary" href="{{ route('employee.attendance.self') }}">My Attendance</a>
+                <a class="button secondary" href="{{ route('leaves.approval') }}">Leave Approvals</a>
+                <a class="button secondary" href="{{ route('wfh-requests.index') }}">WFH Requests</a>
                 <a class="button secondary" href="{{ route('dashboard') }}">Dashboard</a>
             </div>
         </div>

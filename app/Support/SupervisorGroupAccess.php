@@ -7,7 +7,7 @@ use App\Models\User;
 
 class SupervisorGroupAccess
 {
-    public static function members(User $supervisor)
+    public static function groups(User $supervisor)
     {
         $employeeId = $supervisor->employee?->id;
 
@@ -18,7 +18,13 @@ class SupervisorGroupAccess
         return EmployeeGroup::query()
             ->where('supervisor_employee_id', $employeeId)
             ->with('members')
-            ->get()
+            ->orderBy('name')
+            ->get();
+    }
+
+    public static function members(User $supervisor)
+    {
+        return self::groups($supervisor)
             ->flatMap(fn ($group) => $group->members)
             ->unique('id')
             ->sortBy('employee_name')

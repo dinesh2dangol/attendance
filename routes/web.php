@@ -243,3 +243,7 @@ Route::middleware(['auth', 'role:employee,supervisor'])->group(function () {
 Route::get('team-attendance', [EmployeePortalController::class, 'teamAttendance'])
     ->middleware(['auth', 'role:supervisor'])
     ->name('employee.attendance.team');
+
+Route::get('my-groups', [EmployeePortalController::class, 'myGroups'])
+    ->middleware(['auth', 'role:supervisor'])
+    ->name('employee.groups');

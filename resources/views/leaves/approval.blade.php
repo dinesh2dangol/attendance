@@ -152,7 +152,14 @@
                 <h1>Leave Approval</h1>
                 <p>Review pending leaves and see totals for absent days and leaves.</p>
             </div>
-            <a class="button button-secondary" href="{{ route('dashboard') }}">Back to Dashboard</a>
+            <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+                @if (auth()->user()?->role?->slug === 'supervisor')
+                    <a class="button button-secondary" href="{{ route('employee.groups') }}">My Groups</a>
+                    <a class="button button-secondary" href="{{ route('employee.attendance.team') }}">Team Attendance</a>
+                    <a class="button button-secondary" href="{{ route('wfh-requests.index') }}">WFH Requests</a>
+                @endif
+                <a class="button button-secondary" href="{{ route('dashboard') }}">Back to Dashboard</a>
+            </div>
         </div>
 
         @if(session('success'))

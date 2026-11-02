@@ -20,6 +20,7 @@
         .calendar-actions .disabled { pointer-events: none; opacity: 0.5; }
         .yearly-summary { display: flex; flex-wrap: wrap; gap: 1rem 2rem; margin-bottom: 1.25rem; padding: 1rem 1.25rem; border: 1px solid #e2e8f0; border-radius: 0.85rem; background: #f8fafc; }
         .yearly-summary p { margin: 0; color: #334155; }
+        .yearly-summary .allowed-leaves { flex-basis: 100%; }
         .yearly-summary strong { color: #0f172a; }
         .yearly-summary > details { flex-basis: 100%; }
         .yearly-summary summary { cursor: pointer; color: #0f172a; }
@@ -83,11 +84,14 @@
                     <a class="button button-secondary" href="{{ route('employee.leaves.index') }}">My Leaves</a>
                     <a class="button button-secondary" href="{{ route('employee.wfh.index') }}">My WFH Requests</a>
                     @if (auth()->user()->role?->slug === 'supervisor')
+                        <a class="button button-secondary" href="{{ route('employee.groups') }}">My Groups</a>
                         <a class="button button-secondary" href="{{ route('employee.attendance.team') }}">Team Attendance</a>
                         <a class="button button-secondary" href="{{ route('leaves.approval') }}">Team Leave Approvals</a>
                         <a class="button button-secondary" href="{{ route('wfh-requests.index') }}">Team WFH Requests</a>
                     @endif
                 @elseif (auth()->user()->role?->slug === 'supervisor')
+                    <a class="button button-secondary" href="{{ route('employee.groups') }}">My Groups</a>
+                    <a class="button button-secondary" href="{{ route('employee.attendance.team') }}">Team Attendance</a>
                     <a class="button button-secondary" href="{{ route('leaves.approval') }}">Team Leave Approvals</a>
                     <a class="button button-secondary" href="{{ route('wfh-requests.index') }}">Team WFH Requests</a>
                 @endif
@@ -139,8 +143,9 @@
 
                 <div class="yearly-summary">
                     <p><strong>Yearly Summary ({{ $year }})</strong></p>
+                    <p class="allowed-leaves"><strong>Total allowed leaves:</strong> Sick leave (5), Casual leave (10)</p>
                     <p><strong>Total Attendance:</strong> {{ $totalYearlyAttendance }}</p>
-                    <p><strong>Total Extra:</strong> {{ $totalYearlyExtra }}</p>
+                    <p><strong>Total Extra-work Days:</strong> {{ $totalYearlyExtra }}</p>
                     <p><strong>Total Absent:</strong> {{ $totalYearlyAbsent }}</p>
                     <p><strong>Total Leaves:</strong> {{ $totalYearlyLeaves }}
                         @if ($yearlyLeaveTotals->isNotEmpty())
@@ -154,7 +159,7 @@
                     @foreach ([
                         'Absent Dates' => $yearlyAbsentDates,
                         'Leave Dates' => $yearlyLeaveDates,
-                        'Extra Dates' => $yearlyExtraDates,
+                        'Extra-work Dates' => $yearlyExtraDates,
                     ] as $label => $dates)
                         <details>
                             <summary><strong>{{ $label }}:</strong> {{ count($dates) }}</summary>

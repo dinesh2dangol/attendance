@@ -35,9 +35,18 @@
                 @if ($isOwnRequestList)
                     <a class="button button-secondary" href="{{ route('employee.attendance.self') }}">My Attendance</a>
                     <a class="button" href="{{ route('employee.wfh.create') }}">Request WFH</a>
+                    @if (auth()->user()->role?->slug === 'supervisor')
+                        <a class="button button-secondary" href="{{ route('employee.groups') }}">My Groups</a>
+                        <a class="button button-secondary" href="{{ route('employee.attendance.team') }}">Team Attendance</a>
+                        <a class="button button-secondary" href="{{ route('leaves.approval') }}">Leave Approvals</a>
+                        <a class="button button-secondary" href="{{ route('wfh-requests.index') }}">Team WFH Requests</a>
+                    @endif
                 @else
                     <a class="button button-secondary" href="{{ route('dashboard') }}">Dashboard</a>
                     @if (auth()->user()->role?->slug === 'supervisor')
+                        <a class="button button-secondary" href="{{ route('employee.groups') }}">My Groups</a>
+                        <a class="button button-secondary" href="{{ route('employee.attendance.team') }}">Team Attendance</a>
+                        <a class="button button-secondary" href="{{ route('leaves.approval') }}">Leave Approvals</a>
                         <a class="button button-secondary" href="{{ route('employee.wfh.index') }}">My WFH Requests</a>
                     @endif
                     @if (auth()->user()->role?->slug === 'superadmin')

@@ -96,15 +96,11 @@ class EmployeeGroupController extends Controller
         $supervisor = Employee::query()
             ->whereKey($supervisorId)
             ->whereHas('account.role', fn ($query) => $query->whereIn('slug', ['employee', 'supervisor']))
-            ->whereDoesntHave('supervisedGroup', fn ($query) => $query->when(
-                $group,
-                fn ($query) => $query->where('id', '!=', $group->id)
-            ))
             ->exists();
 
         if (! $supervisor) {
             throw ValidationException::withMessages([
-                'supervisor_employee_id' => 'Select an employee account that is not already supervising another group.',
+                'supervisor_employee_id' => 'Select an employee account that can supervise groups.',
             ]);
         }
 
@@ -129,12 +125,6 @@ class EmployeeGroupController extends Controller
     {
         $supervisors = Employee::query()
             ->whereHas('account.role', fn ($query) => $query->whereIn('slug', ['employee', 'supervisor']))
-            ->where(function ($query) use ($group) {
-                $query->whereDoesntHave('supervisedGroup');
-                if ($group) {
-                    $query->orWhere('employees.id', $group->supervisor_employee_id);
-                }
-            })
             ->with('account')
             ->orderBy('employee_name')
             ->get();
@@ -161,7 +151,7 @@ class EmployeeGroupController extends Controller
 
     private function restoreEmployeeRoleIfNoLongerSupervisor(Employee $employee): void
     {
-        if ($employee->supervisedGroup()->exists()) {
+        if ($employee->supervisedGroups()->exists()) {
             return;
         }
 

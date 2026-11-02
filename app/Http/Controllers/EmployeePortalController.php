@@ -14,6 +14,13 @@ use Illuminate\Support\Facades\DB;
 
 class EmployeePortalController extends Controller
 {
+    public function myGroups(Request $request)
+    {
+        $groups = SupervisorGroupAccess::groups($request->user());
+
+        return view('employee.groups', compact('groups'));
+    }
+
     public function teamAttendance(Request $request)
     {
         $members = SupervisorGroupAccess::members($request->user());

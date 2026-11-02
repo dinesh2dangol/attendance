@@ -18,8 +18,7 @@ class EmployeeGroupTest extends TestCase
         $this->createGroupSchema();
         $superadmin = $this->createUser('superadmin', 'root');
         $supervisorOne = $this->createEmployeeWithAccount(1, 'EMP-1', 'Supervisor One');
-        $supervisorTwo = $this->createEmployeeWithAccount(2, 'EMP-2', 'Supervisor Two');
-        $member = $this->createEmployeeWithAccount(3, 'EMP-3', 'Group Member');
+        $member = $this->createEmployeeWithAccount(2, 'EMP-2', 'Group Member');
 
         $this->actingAs($superadmin)
             ->post(route('employee-groups.store'), [
@@ -33,29 +32,55 @@ class EmployeeGroupTest extends TestCase
 
         $this->post(route('employee-groups.store'), [
             'name' => 'Support',
-            'supervisor_employee_id' => $supervisorTwo->id,
+            'supervisor_employee_id' => $supervisorOne->id,
             'members' => [$member->id],
         ])->assertRedirect(route('employee-groups.index'));
-
-        $this->post(route('employee-groups.store'), [
-            'name' => 'Finance',
-            'supervisor_employee_id' => $supervisorOne->id,
-            'members' => [],
-        ])->assertSessionHasErrors('supervisor_employee_id');
 
         $this->assertSame(
             2,
             DB::table('employee_group_members')->where('employee_id', $member->id)->count()
         );
         $this->assertSame(
+            2,
+            DB::table('employee_groups')->where('supervisor_employee_id', $supervisorOne->id)->count()
+        );
+        $this->assertSame(
             Role::where('slug', 'supervisor')->value('id'),
             $supervisorOne->account->fresh()->role_id
         );
         $this->assertSame(
-            ['EMP-3'],
+            ['EMP-2'],
             SupervisorGroupAccess::memberUserIds($supervisorOne->account->fresh())
         );
         $this->assertNotNull($firstGroupId);
+    }
+
+    public function test_supervisor_can_view_all_their_groups(): void
+    {
+        $this->createGroupSchema();
+        $supervisor = $this->createEmployeeWithAccount(1, 'EMP-1', 'Supervisor', 'supervisor');
+        $member = $this->createEmployeeWithAccount(2, 'EMP-2', 'Member');
+        foreach (['Operations', 'Support'] as $name) {
+            $groupId = DB::table('employee_groups')->insertGetId([
+                'name' => $name,
+                'supervisor_employee_id' => $supervisor->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            DB::table('employee_group_members')->insert([
+                'employee_group_id' => $groupId,
+                'employee_id' => $member->id,
+            ]);
+        }
+
+        $this->actingAs($supervisor->account)
+            ->get(route('employee.groups'))
+            ->assertOk()
+            ->assertSee('Operations')
+            ->assertSee('Support')
+            ->assertSee('Team Attendance')
+            ->assertSee('Leave Approvals')
+            ->assertSee('WFH Requests');
     }
 
     public function test_changing_a_groups_supervisor_updates_both_account_roles(): void
@@ -271,7 +296,7 @@ class EmployeeGroupTest extends TestCase
         Schema::create('employee_groups', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
-            $table->unsignedBigInteger('supervisor_employee_id')->unique();
+            $table->unsignedBigInteger('supervisor_employee_id');
             $table->timestamps();
         });
         Schema::create('employee_group_members', function (Blueprint $table) {
