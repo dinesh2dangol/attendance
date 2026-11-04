@@ -190,7 +190,6 @@ class EmployeeGroupTest extends TestCase
             $table->date('attendance_date');
             $table->string('attendance_status');
             $table->string('first_punch')->nullable();
-            $table->string('last_punch')->nullable();
         });
         $supervisor = $this->createEmployeeWithAccount(1, 'EMP-1', 'Supervisor', 'supervisor');
         $member = $this->createEmployeeWithAccount(2, 'EMP-2', 'Group Member');
@@ -212,21 +211,18 @@ class EmployeeGroupTest extends TestCase
                 'attendance_date' => $today,
                 'attendance_status' => 'Present',
                 'first_punch' => '08:30',
-                'last_punch' => '17:00',
             ],
             [
                 'user_id' => 'EMP-2',
                 'attendance_date' => now()->subDay()->toDateString(),
                 'attendance_status' => 'Absent',
                 'first_punch' => null,
-                'last_punch' => null,
             ],
             [
                 'user_id' => 'EMP-3',
                 'attendance_date' => $today,
                 'attendance_status' => 'Present',
                 'first_punch' => '09:00',
-                'last_punch' => '17:00',
             ],
         ]);
 
@@ -238,7 +234,7 @@ class EmployeeGroupTest extends TestCase
             ->assertSee($today)
             ->assertSee('Present')
             ->assertSee('08:30')
-            ->assertSee('17:00')
+            ->assertDontSee('Check Out')
             ->assertDontSee('Absent')
             ->assertDontSee('09:00')
             ->assertSee(route('employee.attendance', $member), false)

@@ -31,7 +31,7 @@ class EmployeePortalController extends Controller
             : DB::table('daily_attendance_step3')
                 ->whereIn('user_id', $memberUserIds)
                 ->whereDate('attendance_date', $today->toDateString())
-                ->select('user_id', 'attendance_status', 'first_punch', 'last_punch')
+                ->select('user_id', 'attendance_status', 'first_punch')
                 ->get()
                 ->keyBy('user_id');
 

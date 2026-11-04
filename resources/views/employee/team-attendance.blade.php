@@ -42,7 +42,6 @@
                             <th>Employee</th>
                             <th>Today's Attendance ({{ $today->format('Y-m-d') }})</th>
                             <th>Check In</th>
-                            <th>Check Out</th>
                             <th>History</th>
                         </tr>
                     </thead>
@@ -53,7 +52,6 @@
                                 <td>{{ $member->employee_name }}</td>
                                 <td>{{ $todayAttendance?->attendance_status ?? 'Not recorded' }}</td>
                                 <td>{{ $todayAttendance?->first_punch ?? '-' }}</td>
-                                <td>{{ $todayAttendance?->last_punch ?? '-' }}</td>
                                 <td><a href="{{ route('employee.attendance', $member) }}">View Attendance</a></td>
                             </tr>
                         @endforeach
