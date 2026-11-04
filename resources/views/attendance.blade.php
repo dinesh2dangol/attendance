@@ -241,7 +241,7 @@
                             data_get($record, 'day_type') === 'Weekend'
                             && in_array(data_get($record, 'attendance_status'), ['Present', 'Remote'], true)
                         );
-                        $isWeekend = $dayRecords->contains(fn ($record) => data_get($record, 'day_type') === 'Weekend');
+                        $isWeekend = $day->isWeekend() || $dayRecords->contains(fn ($record) => data_get($record, 'day_type') === 'Weekend');
                         $dayClasses = $isCurrentMonth
                             ? trim(($holiday ? 'holiday ' : '') . ($isWeekend ? 'weekend' : ''))
                             : 'other-month';
@@ -397,7 +397,11 @@
                                 </div>
                                 @endif
                             @empty
-                                <span class="attendance-chip no-entry">No entry</span>
+                                @if ($isWeekend)
+                                    <span class="attendance-chip weekend">Weekend</span>
+                                @else
+                                    <span class="attendance-chip no-entry">No entry</span>
+                                @endif
                             @endforelse
                             @endif
                             @endif

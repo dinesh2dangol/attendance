@@ -90,6 +90,12 @@ class YearlyAttendanceSummaryTest extends TestCase
                 'leave_type' => 'sick',
                 'approval_status' => 0,
             ],
+            [
+                'user_id' => 'EMP-001',
+                'leave_date' => '2026-01-16',
+                'leave_type' => 'casual',
+                'approval_status' => 1,
+            ],
         ]);
         DB::table('work_from_home_requests')->insert([
             [
@@ -117,7 +123,8 @@ class YearlyAttendanceSummaryTest extends TestCase
         $this->assertSame([
             ['date' => '2026-01-11', 'type' => 'C', 'pending' => false],
             ['date' => '2026-01-13', 'type' => 'S', 'pending' => true],
+            ['date' => '2026-01-16', 'type' => 'C', 'pending' => false],
         ], $summary['yearlyLeaveDates']);
-        $this->assertSame(['casual' => 1, 'sick' => 1], $summary['yearlyLeaveTotals']->all());
+        $this->assertSame(['casual' => 2, 'sick' => 1], $summary['yearlyLeaveTotals']->all());
     }
 }
