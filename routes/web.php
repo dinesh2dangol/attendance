@@ -250,6 +250,10 @@ Route::get('team-attendance', [EmployeePortalController::class, 'teamAttendance'
     ->middleware(['auth', 'role:supervisor'])
     ->name('employee.attendance.team');
 
+Route::get('team-attendance/export', [EmployeePortalController::class, 'exportTeamAttendance'])
+    ->middleware(['auth', 'role:supervisor'])
+    ->name('employee.attendance.team.export');
+
 Route::get('team-attendance/{employee}/punch-selection', [EmployeePortalController::class, 'editTeamAttendancePunchSelection'])
     ->middleware(['auth', 'role:supervisor'])
     ->name('employee.attendance.team.punch-selection.edit');

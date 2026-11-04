@@ -39,6 +39,14 @@
             <button class="button" type="submit">Show Attendance</button>
         </form>
 
+        <form method="GET" action="{{ route('employee.attendance.team.export') }}">
+            <label for="attendance-from">Export from</label>
+            <input id="attendance-from" type="date" name="from" value="{{ $attendanceDate->copy()->startOfMonth()->format('Y-m-d') }}" required>
+            <label for="attendance-to">to</label>
+            <input id="attendance-to" type="date" name="to" value="{{ $attendanceDate->format('Y-m-d') }}" required>
+            <button class="button" type="submit">Export to Excel</button>
+        </form>
+
         @if (session('success'))
             <p role="status">{{ session('success') }}</p>
         @endif

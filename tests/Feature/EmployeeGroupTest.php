@@ -227,6 +227,7 @@ class EmployeeGroupTest extends TestCase
                 'punch_3' => '12:30',
                 'punch_4' => '17:00',
                 'punch_5' => null,
+                'punch_5' => null,
             ],
             [
                 'user_id' => 'EMP-2',
@@ -409,6 +410,124 @@ class EmployeeGroupTest extends TestCase
             'lunch_in_punch' => '4',
             'check_out_punch' => '5',
         ])->assertForbidden();
+    }
+
+    public function test_supervisor_can_export_scoped_team_attendance_with_approved_punches(): void
+    {
+        $this->createGroupSchema();
+        Schema::create('daily_attendance_step3', function (Blueprint $table) {
+            $table->string('user_id');
+            $table->date('attendance_date');
+            $table->string('attendance_status');
+            $table->string('first_punch')->nullable();
+            $table->string('last_punch')->nullable();
+            $table->string('lunch_out')->nullable();
+            $table->string('lunch_in')->nullable();
+            foreach (range(1, 5) as $punchNumber) {
+                $table->string('punch_'.$punchNumber)->nullable();
+            }
+        });
+        $supervisor = $this->createEmployeeWithAccount(1, 'EMP-1', 'Supervisor', 'supervisor');
+        $member = $this->createEmployeeWithAccount(2, 'EMP-2', 'Group Member');
+        $other = $this->createEmployeeWithAccount(3, 'EMP-3', 'Other Employee');
+        $groupId = DB::table('employee_groups')->insertGetId([
+            'name' => 'Operations',
+            'supervisor_employee_id' => $supervisor->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('employee_group_members')->insert([
+            'employee_group_id' => $groupId,
+            'employee_id' => $member->id,
+        ]);
+        $today = now()->toDateString();
+        $yesterday = now()->subDay()->toDateString();
+        DB::table('daily_attendance_step3')->insert([
+            [
+                'user_id' => 'EMP-1',
+                'attendance_date' => $today,
+                'attendance_status' => 'Present',
+                'first_punch' => '08:00',
+                'last_punch' => '17:00',
+                'lunch_out' => null,
+                'lunch_in' => null,
+                'punch_1' => '08:00',
+                'punch_2' => '12:00',
+                'punch_3' => '12:30',
+                'punch_4' => '17:00',
+                'punch_5' => null,
+            ],
+            [
+                'user_id' => 'EMP-2',
+                'attendance_date' => $today,
+                'attendance_status' => 'Present',
+                'first_punch' => '08:30',
+                'last_punch' => '17:30',
+                'lunch_out' => null,
+                'lunch_in' => null,
+                'punch_1' => '08:30',
+                'punch_2' => '08:35',
+                'punch_3' => '12:30',
+                'punch_4' => '13:00',
+                'punch_5' => '17:30',
+            ],
+            [
+                'user_id' => 'EMP-2',
+                'attendance_date' => $yesterday,
+                'attendance_status' => 'Absent',
+                'first_punch' => null,
+                'last_punch' => null,
+                'lunch_out' => null,
+                'lunch_in' => null,
+                'punch_1' => null,
+                'punch_2' => null,
+                'punch_3' => null,
+                'punch_4' => null,
+                'punch_5' => null,
+            ],
+            [
+                'user_id' => 'EMP-3',
+                'attendance_date' => $today,
+                'attendance_status' => 'Present',
+                'first_punch' => null,
+                'last_punch' => null,
+                'lunch_out' => null,
+                'lunch_in' => null,
+                'punch_1' => null,
+                'punch_2' => null,
+                'punch_3' => null,
+                'punch_4' => null,
+                'punch_5' => null,
+            ],
+        ]);
+        DB::table('supervisor_attendance_punch_selections')->insert([
+            'user_id' => 'EMP-2',
+            'attendance_date' => $today,
+            'check_in_punch' => 1,
+            'lunch_out_punch' => 3,
+            'lunch_in_punch' => 4,
+            'check_out_punch' => 5,
+            'remarks' => 'Duplicate check-in excluded.',
+            'approved_by' => $supervisor->account->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($supervisor->account)
+            ->get(route('employee.attendance.team.export', [
+                'from' => $today,
+                'to' => $today,
+            ]))
+            ->assertOk()
+            ->assertHeader('content-type', 'text/csv; charset=UTF-8')
+            ->assertHeader('content-disposition', 'attachment; filename=team-attendance-'.$today.'-to-'.$today.'.csv');
+
+        $this->assertStringContainsString('Lunch Time (minutes)', $response->streamedContent());
+        $this->assertStringContainsString('EMP-1,Supervisor,'.$today.',Present,08:00,12:00,12:30,30,17:00', $response->streamedContent());
+        $this->assertStringContainsString('EMP-2,"Group Member",'.$today.',Present,08:30,12:30,13:00,30,17:30', $response->streamedContent());
+        $this->assertStringContainsString('Duplicate check-in excluded.', $response->streamedContent());
+        $this->assertStringNotContainsString('Other Employee', $response->streamedContent());
+        $this->assertStringNotContainsString('Absent', $response->streamedContent());
     }
 
     public function test_supervisor_can_approve_only_wfh_requests_for_group_members(): void

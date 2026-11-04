@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmployeePortalController extends Controller
 {
@@ -68,6 +69,97 @@ class EmployeePortalController extends Controller
             'attendanceByUser',
             'punchSelectionsByUser'
         ));
+    }
+
+    public function exportTeamAttendance(Request $request): StreamedResponse
+    {
+        $validated = $request->validate([
+            'from' => ['required', 'date_format:Y-m-d'],
+            'to' => ['required', 'date_format:Y-m-d', 'after_or_equal:from'],
+        ]);
+        $supervisor = $request->user()->employee;
+        $members = SupervisorGroupAccess::members($request->user())
+            ->reject(fn ($member) => $member->user_id === $supervisor?->user_id);
+        $userIds = $members->pluck('user_id')
+            ->push($supervisor?->user_id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $attendanceRecords = $userIds->isEmpty()
+            ? collect()
+            : DB::table('daily_attendance_step3')
+                ->whereIn('user_id', $userIds)
+                ->whereBetween('attendance_date', [$validated['from'], $validated['to']])
+                ->orderBy('attendance_date')
+                ->get();
+        $selections = $userIds->isEmpty()
+            ? collect()
+            : DB::table('supervisor_attendance_punch_selections')
+                ->leftJoin('users as approvers', 'approvers.id', '=', 'supervisor_attendance_punch_selections.approved_by')
+                ->whereIn('supervisor_attendance_punch_selections.user_id', $userIds)
+                ->whereBetween('supervisor_attendance_punch_selections.attendance_date', [$validated['from'], $validated['to']])
+                ->select('supervisor_attendance_punch_selections.*', 'approvers.name as approved_by_name')
+                ->get();
+        SupervisorAttendancePunchSelections::apply($attendanceRecords, $selections);
+
+        $employeesByUserId = $members
+            ->push($supervisor)
+            ->filter()
+            ->keyBy('user_id');
+        $selectionsByAttendance = $selections->keyBy(
+            fn ($selection) => $selection->user_id.'|'.Carbon::parse($selection->attendance_date)->toDateString()
+        );
+        $filename = sprintf('team-attendance-%s-to-%s.csv', $validated['from'], $validated['to']);
+
+        return response()->streamDownload(function () use ($attendanceRecords, $employeesByUserId, $selectionsByAttendance): void {
+            $output = fopen('php://output', 'w');
+            fwrite($output, "\xEF\xBB\xBF");
+            fputcsv($output, [
+                'Employee ID',
+                'Employee',
+                'Date',
+                'Attendance',
+                'Check In',
+                'Lunch Out',
+                'Lunch In',
+                'Lunch Time (minutes)',
+                'Check Out',
+                'Approved By',
+                'Remarks',
+            ]);
+
+            foreach ($attendanceRecords as $attendance) {
+                $attendanceDate = Carbon::parse($attendance->attendance_date)->toDateString();
+                $selection = $selectionsByAttendance->get($attendance->user_id.'|'.$attendanceDate);
+                $lunchOut = data_get($attendance, 'supervisor_punch_selection_applied', false)
+                    ? $attendance->lunch_out
+                    : ($attendance->lunch_out ?? $attendance->punch_2 ?? null);
+                $lunchIn = data_get($attendance, 'supervisor_punch_selection_applied', false)
+                    ? $attendance->lunch_in
+                    : ($attendance->lunch_in ?? $attendance->punch_3 ?? null);
+                $lunchMinutes = filled($lunchOut) && filled($lunchIn)
+                    ? intdiv((int) abs(Carbon::parse($lunchOut)->diffInSeconds(Carbon::parse($lunchIn))), 60)
+                    : null;
+                $employee = $employeesByUserId->get($attendance->user_id);
+
+                fputcsv($output, [
+                    $this->excelSafeCell($attendance->user_id),
+                    $this->excelSafeCell($employee?->employee_name ?? ''),
+                    $attendanceDate,
+                    $this->excelSafeCell($attendance->attendance_status ?? ''),
+                    $this->excelSafeCell($attendance->first_punch ?? ''),
+                    $this->excelSafeCell($lunchOut ?? ''),
+                    $this->excelSafeCell($lunchIn ?? ''),
+                    $lunchMinutes,
+                    $this->excelSafeCell($attendance->last_punch ?? ''),
+                    $this->excelSafeCell($selection?->approved_by_name ?? ''),
+                    $this->excelSafeCell($selection?->remarks ?? ''),
+                ]);
+            }
+
+            fclose($output);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     public function editTeamAttendancePunchSelection(Request $request, Employee $employee)
@@ -236,5 +328,12 @@ class EmployeePortalController extends Controller
             'manualAttendanceByDate',
             'year'
         ) + $yearlySummary + ['isOwnAttendance' => true]);
+    }
+
+    private function excelSafeCell(?string $value): string
+    {
+        return preg_match('/^[\t\r\n ]*[=+\-@]/', $value ?? '') === 1
+            ? "'".$value
+            : ($value ?? '');
     }
 }
