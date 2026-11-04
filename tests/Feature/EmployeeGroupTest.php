@@ -190,6 +190,14 @@ class EmployeeGroupTest extends TestCase
             $table->date('attendance_date');
             $table->string('attendance_status');
             $table->string('first_punch')->nullable();
+            $table->string('last_punch')->nullable();
+            $table->string('lunch_out')->nullable();
+            $table->string('lunch_in')->nullable();
+            $table->string('punch_1')->nullable();
+            $table->string('punch_2')->nullable();
+            $table->string('punch_3')->nullable();
+            $table->string('punch_4')->nullable();
+            $table->string('punch_5')->nullable();
         });
         $supervisor = $this->createEmployeeWithAccount(1, 'EMP-1', 'Supervisor', 'supervisor');
         $member = $this->createEmployeeWithAccount(2, 'EMP-2', 'Group Member');
@@ -207,22 +215,60 @@ class EmployeeGroupTest extends TestCase
         $today = now()->toDateString();
         DB::table('daily_attendance_step3')->insert([
             [
+                'user_id' => 'EMP-1',
+                'attendance_date' => $today,
+                'attendance_status' => 'Present',
+                'first_punch' => '08:00',
+                'last_punch' => '17:00',
+                'lunch_out' => null,
+                'lunch_in' => null,
+                'punch_1' => '08:00',
+                'punch_2' => '12:00',
+                'punch_3' => '12:30',
+                'punch_4' => '17:00',
+                'punch_5' => null,
+            ],
+            [
                 'user_id' => 'EMP-2',
                 'attendance_date' => $today,
                 'attendance_status' => 'Present',
                 'first_punch' => '08:30',
+                'last_punch' => '17:00',
+                'lunch_out' => null,
+                'lunch_in' => null,
+                'punch_1' => '08:30',
+                'punch_2' => '12:30',
+                'punch_3' => '13:00',
+                'punch_4' => '17:00',
+                'punch_5' => null,
             ],
             [
                 'user_id' => 'EMP-2',
                 'attendance_date' => now()->subDay()->toDateString(),
                 'attendance_status' => 'Absent',
                 'first_punch' => null,
+                'last_punch' => null,
+                'lunch_out' => null,
+                'lunch_in' => null,
+                'punch_1' => null,
+                'punch_2' => null,
+                'punch_3' => null,
+                'punch_4' => null,
+                'punch_5' => null,
             ],
             [
                 'user_id' => 'EMP-3',
                 'attendance_date' => $today,
                 'attendance_status' => 'Present',
                 'first_punch' => '09:00',
+                'last_punch' => '17:00',
+                'lunch_out' => '13:00',
+                'lunch_in' => '13:30',
+                'punch_1' => '09:00',
+                'punch_2' => '13:00',
+                'punch_3' => '13:30',
+                'punch_4' => '17:00',
+                'punch_5' => null,
             ],
         ]);
 
@@ -230,15 +276,139 @@ class EmployeeGroupTest extends TestCase
             ->get(route('employee.attendance.team'))
             ->assertOk()
             ->assertSee('Group Member')
-            ->assertSee('Today&#039;s Attendance', false)
+            ->assertSee('name="date"', false)
+            ->assertSee('value="'.$today.'"', false)
+            ->assertSee('Attendance ('.$today.')')
             ->assertSee($today)
             ->assertSee('Present')
             ->assertSee('08:30')
-            ->assertDontSee('Check Out')
+            ->assertSee('Supervisor (You)')
+            ->assertSee('08:00')
+            ->assertSee('Lunch Out')
+            ->assertSee('12:30')
+            ->assertSee('Lunch In')
+            ->assertSee('13:00')
+            ->assertSee('Lunch Time')
+            ->assertSee('30 minutes')
+            ->assertSee('Check Out')
+            ->assertSee('Review Punches')
+            ->assertDontSee('<select', false)
             ->assertDontSee('Absent')
             ->assertDontSee('09:00')
             ->assertSee(route('employee.attendance', $member), false)
             ->assertDontSee('Other Employee');
+
+        $content = $this->get(route('employee.attendance.team'))
+            ->assertOk()
+            ->getContent();
+        $this->assertLessThan(
+            strpos($content, 'Group Member'),
+            strpos($content, 'Supervisor (You)')
+        );
+
+        $selectedDate = now()->subDay()->toDateString();
+        $this->get(route('employee.attendance.team', ['date' => $selectedDate]))
+            ->assertOk()
+            ->assertSee('value="'.$selectedDate.'"', false)
+            ->assertSee('Attendance ('.$selectedDate.')')
+            ->assertSee('Absent')
+            ->assertDontSee('08:30');
+    }
+
+    public function test_supervisor_can_approve_custom_punch_assignments_for_group_members(): void
+    {
+        $this->createGroupSchema();
+        Schema::create('daily_attendance_step3', function (Blueprint $table) {
+            $table->string('user_id');
+            $table->date('attendance_date');
+            $table->string('attendance_status');
+            $table->string('first_punch')->nullable();
+            $table->string('last_punch')->nullable();
+            $table->string('lunch_out')->nullable();
+            $table->string('lunch_in')->nullable();
+            foreach (range(1, 5) as $punchNumber) {
+                $table->string('punch_'.$punchNumber)->nullable();
+            }
+        });
+        $supervisor = $this->createEmployeeWithAccount(1, 'EMP-1', 'Supervisor', 'supervisor');
+        $member = $this->createEmployeeWithAccount(2, 'EMP-2', 'Group Member');
+        $other = $this->createEmployeeWithAccount(3, 'EMP-3', 'Other Employee');
+        $groupId = DB::table('employee_groups')->insertGetId([
+            'name' => 'Operations',
+            'supervisor_employee_id' => $supervisor->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('employee_group_members')->insert([
+            'employee_group_id' => $groupId,
+            'employee_id' => $member->id,
+        ]);
+        $today = now()->toDateString();
+        DB::table('daily_attendance_step3')->insert([
+            'user_id' => 'EMP-2',
+            'attendance_date' => $today,
+            'attendance_status' => 'Present',
+            'first_punch' => '08:30',
+            'last_punch' => '17:30',
+            'lunch_out' => '08:35',
+            'lunch_in' => '12:30',
+            'punch_1' => '08:30',
+            'punch_2' => '08:35',
+            'punch_3' => '12:30',
+            'punch_4' => '13:00',
+            'punch_5' => '17:30',
+        ]);
+
+        $this->actingAs($supervisor->account);
+        $this->get(route('employee.attendance.team.punch-selection.edit', [
+            'employee' => $member,
+            'date' => $today,
+        ]))
+            ->assertOk()
+            ->assertSee('Review Attendance Punches')
+            ->assertSee('name="lunch_out_punch"', false)
+            ->assertSee('name="lunch_in_punch"', false)
+            ->assertSee('Punch 2 — 08:35')
+            ->assertSee('selected', false);
+        $this->post(route('employee.attendance.team.punch-selection', $member), [
+            'date' => $today,
+            'check_in_punch' => '1',
+            'lunch_out_punch' => '3',
+            'lunch_in_punch' => '4',
+            'check_out_punch' => '5',
+            'remarks' => 'Punch 2 was an accidental duplicate check-in.',
+        ])
+            ->assertRedirect(route('employee.attendance.team', ['date' => $today]));
+
+        $this->assertDatabaseHas('supervisor_attendance_punch_selections', [
+            'user_id' => 'EMP-2',
+            'attendance_date' => $today,
+            'check_in_punch' => 1,
+            'lunch_out_punch' => 3,
+            'lunch_in_punch' => 4,
+            'check_out_punch' => 5,
+            'remarks' => 'Punch 2 was an accidental duplicate check-in.',
+            'approved_by' => $supervisor->account->id,
+        ]);
+
+        $response = $this->get(route('employee.attendance.team', ['date' => $today]))
+            ->assertOk()
+            ->assertSee('Approved by')
+            ->assertSee('Edit Approval')
+            ->assertSee('12:30')
+            ->assertSee('13:00')
+            ->assertSee('30 minutes')
+            ->assertSee('17:30')
+            ->assertSee('Punch 2 was an accidental duplicate check-in.')
+            ->assertDontSee('<select', false);
+
+        $this->post(route('employee.attendance.team.punch-selection', $other), [
+            'date' => $today,
+            'check_in_punch' => '1',
+            'lunch_out_punch' => '3',
+            'lunch_in_punch' => '4',
+            'check_out_punch' => '5',
+        ])->assertForbidden();
     }
 
     public function test_supervisor_can_approve_only_wfh_requests_for_group_members(): void
@@ -357,6 +527,19 @@ class EmployeeGroupTest extends TestCase
             $table->timestamp('reviewed_at')->nullable();
             $table->timestamps();
         });
+        Schema::create('supervisor_attendance_punch_selections', function (Blueprint $table) {
+            $table->id();
+            $table->string('user_id');
+            $table->date('attendance_date');
+            $table->unsignedTinyInteger('check_in_punch')->nullable();
+            $table->unsignedTinyInteger('lunch_out_punch')->nullable();
+            $table->unsignedTinyInteger('lunch_in_punch')->nullable();
+            $table->unsignedTinyInteger('check_out_punch')->nullable();
+            $table->text('remarks')->nullable();
+            $table->unsignedBigInteger('approved_by');
+            $table->timestamps();
+            $table->unique(['user_id', 'attendance_date']);
+        });
 
         DB::table('roles')->insert([
             ['name' => 'Administrator', 'slug' => 'admin', 'created_at' => now(), 'updated_at' => now()],
@@ -386,7 +569,7 @@ class EmployeeGroupTest extends TestCase
     {
         return User::create([
             'name' => ucfirst($suffix),
-            'email' => $suffix . '@example.test',
+            'email' => $suffix.'@example.test',
             'password' => 'password',
             'role_id' => Role::where('slug', $roleSlug)->value('id'),
             'employee_id' => $employeeId,

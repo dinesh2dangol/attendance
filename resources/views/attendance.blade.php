@@ -376,8 +376,12 @@
                                     <hr color="lightgray" />
                                     @php
                                         $p1 = data_get($record, 'punch_1');
-                                        $p2 = data_get($record, 'punch_2');
-                                        $p3 = data_get($record, 'punch_3');
+                                        $p2 = data_get($record, 'supervisor_punch_selection_applied')
+                                            ? data_get($record, 'lunch_out')
+                                            : data_get($record, 'punch_2');
+                                        $p3 = data_get($record, 'supervisor_punch_selection_applied')
+                                            ? data_get($record, 'lunch_in')
+                                            : data_get($record, 'punch_3');
                                         $p4 = data_get($record, 'punch_4');
                                         $p5 = data_get($record, 'punch_5');
                                         

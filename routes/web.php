@@ -23,6 +23,7 @@ use App\Support\ManualAttendanceCategories;
 use App\Support\YearlyAttendanceSummary;
 use App\Support\WorkFromHomeCalendar;
 use App\Support\SupervisorGroupAccess;
+use App\Support\SupervisorAttendancePunchSelections;
 
 Route::get('/', function () {
     return view('welcome');
@@ -157,6 +158,11 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
         ->whereBetween('attendance_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
         ->orderBy('attendance_date')
         ->get();
+    $punchSelections = DB::table('supervisor_attendance_punch_selections')
+        ->where('user_id', $employee->user_id)
+        ->whereBetween('attendance_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+        ->get();
+    SupervisorAttendancePunchSelections::apply($attendances, $punchSelections);
 
     $leavesByDate = DB::table('leaves')
         ->where('user_id', $employee->user_id)
@@ -243,6 +249,14 @@ Route::middleware(['auth', 'role:employee,supervisor'])->group(function () {
 Route::get('team-attendance', [EmployeePortalController::class, 'teamAttendance'])
     ->middleware(['auth', 'role:supervisor'])
     ->name('employee.attendance.team');
+
+Route::get('team-attendance/{employee}/punch-selection', [EmployeePortalController::class, 'editTeamAttendancePunchSelection'])
+    ->middleware(['auth', 'role:supervisor'])
+    ->name('employee.attendance.team.punch-selection.edit');
+
+Route::post('team-attendance/{employee}/punch-selection', [EmployeePortalController::class, 'saveTeamAttendancePunchSelection'])
+    ->middleware(['auth', 'role:supervisor'])
+    ->name('employee.attendance.team.punch-selection');
 
 Route::get('my-groups', [EmployeePortalController::class, 'myGroups'])
     ->middleware(['auth', 'role:supervisor'])
