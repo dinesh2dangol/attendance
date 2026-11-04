@@ -120,6 +120,7 @@ class YearlyAttendanceSummaryTest extends TestCase
         $this->assertSame(1, $summary['totalYearlyAbsent']);
         $this->assertSame(['2026-01-12'], $summary['yearlyAbsentDates']);
         $this->assertSame(2, $summary['totalYearlyLeaves']);
+        $this->assertSame(14, $summary['balanceYearlyLeaves']);
         $this->assertSame([
             ['date' => '2026-01-11', 'type' => 'C', 'pending' => false],
             ['date' => '2026-01-13', 'type' => 'S', 'pending' => true],

@@ -113,6 +113,7 @@ class YearlyAttendanceSummary
             ->groupBy(fn ($leave) => strtolower($leave->leave_type))
             ->map(fn ($leaves) => $leaves->count())
             ->sortKeys();
+        $balanceYearlyLeaves = 15 - count($yearlyAbsentDates) - count($yearlyLeaveDates) + count($yearlyExtraDates);
 
         return [
             'totalYearlyAttendance' => $totalYearlyAttendance,
@@ -121,6 +122,7 @@ class YearlyAttendanceSummary
             'totalYearlyAbsent' => count($yearlyAbsentDates),
             'yearlyAbsentDates' => $yearlyAbsentDates,
             'totalYearlyLeaves' => count($yearlyLeaveDates),
+            'balanceYearlyLeaves' => $balanceYearlyLeaves,
             'yearlyLeaveDates' => $yearlyLeaveDates,
             'yearlyLeaveTotals' => $yearlyLeaveTotals,
         ];

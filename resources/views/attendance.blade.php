@@ -158,6 +158,7 @@
                             )
                         @endif
                     </p>
+                    <p><strong>Balance Leave:</strong> {{ $balanceYearlyLeaves }}</p>
                     @foreach ([
                         'Absent Dates' => $yearlyAbsentDates,
                         'Leave Dates' => $yearlyLeaveDates,
