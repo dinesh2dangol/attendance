@@ -113,6 +113,15 @@ class EmployeeGroupTest extends TestCase
             'employee_id' => $member->id,
         ]);
         $today = now()->toDateString();
+        DB::table('work_from_home_requests')->insert([
+            'user_id' => $member->user_id,
+            'start_date' => $today,
+            'end_date' => $today,
+            'reason' => 'Working remotely',
+            'status' => 'approved',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
         DB::table('daily_attendance_step3')->insert([
             [
                 'user_id' => $supervisor->user_id,
@@ -362,6 +371,12 @@ class EmployeeGroupTest extends TestCase
             $table->string('punch_4')->nullable();
             $table->string('punch_5')->nullable();
         });
+        Schema::create('holidays', function (Blueprint $table) {
+            $table->id();
+            $table->date('holiday_date');
+            $table->string('holiday_name');
+            $table->unsignedBigInteger('department_id')->nullable();
+        });
         $supervisor = $this->createEmployeeWithAccount(1, 'EMP-1', 'Supervisor', 'supervisor');
         $member = $this->createEmployeeWithAccount(2, 'EMP-2', 'Group Member');
         $other = $this->createEmployeeWithAccount(3, 'EMP-3', 'Other Employee');
@@ -376,6 +391,16 @@ class EmployeeGroupTest extends TestCase
             'employee_id' => $member->id,
         ]);
         $today = now()->toDateString();
+        $yesterday = now()->subDay()->toDateString();
+        DB::table('holidays')->insert([
+            'holiday_date' => $yesterday,
+            'holiday_name' => 'Founders Day',
+            'department_id' => null,
+        ]);
+        DB::table('work_from_home_requests')->insert([
+            ['user_id' => 'EMP-2', 'start_date' => $yesterday, 'end_date' => $yesterday, 'reason' => 'Test request', 'status' => 'pending'],
+            ['user_id' => 'EMP-2', 'start_date' => $today, 'end_date' => $today, 'reason' => 'Test request', 'status' => 'approved'],
+        ]);
         DB::table('daily_attendance_step3')->insert([
             [
                 'user_id' => 'EMP-1',
@@ -444,7 +469,9 @@ class EmployeeGroupTest extends TestCase
             ->assertSee('value="'.$today.'"', false)
             ->assertSee('Attendance ('.$today.')')
             ->assertSee($today)
-            ->assertSee('Present')
+            ->assertSee('<td>Present</td>', false)
+            ->assertSee('Remote')
+            ->assertDontSee('<th>WFH</th>', false)
             ->assertSee('08:30')
             ->assertSee('Supervisor (You)')
             ->assertSee('08:00')
@@ -456,6 +483,7 @@ class EmployeeGroupTest extends TestCase
             ->assertSee('30 minutes')
             ->assertSee('Check Out')
             ->assertSee('Review Punches')
+            ->assertSee('View Attendance Records')
             ->assertSee('id="employee-user-id"', false)
             ->assertSee($supervisor->user_id.'">'.$supervisor->employee_name.' (You)', false)
             ->assertDontSee('name="lunch_out_punch"', false)
@@ -491,6 +519,41 @@ class EmployeeGroupTest extends TestCase
         ]);
 
         $selectedDate = now()->subDay()->toDateString();
+        $recordsResponse = $this->get(route('employee.attendance.team.records', [
+            'employee_user_id' => $supervisor->user_id,
+            'from' => $selectedDate,
+            'to' => $today,
+        ]))
+            ->assertOk()
+            ->assertSee('Team Attendance Records')
+            ->assertSee('Supervisor: '.$selectedDate.' to '.$today)
+            ->assertSee('Check In')
+            ->assertSee('12:00')
+            ->assertSee('12:30')
+            ->assertSee('30');
+        $this->assertStringNotContainsString('Group Member</td>', $recordsResponse->getContent());
+        $memberRecordsResponse = $this->get(route('employee.attendance.team.records', [
+            'employee_user_id' => $member->user_id,
+            'from' => $selectedDate,
+            'to' => $today,
+        ]))
+            ->assertOk()
+            ->assertSee('Group Member: '.$selectedDate.' to '.$today)
+            ->assertSee('Absent')
+            ->assertSee('08:30')
+            ->assertSee('12:30')
+            ->assertSee('13:00')
+            ->assertSee('Pending')
+            ->assertSee('Approved')
+            ->assertSee('Founders Day')
+            ->assertSee('Holiday');
+        $this->assertStringNotContainsString('<td>Supervisor (You)</td>', $memberRecordsResponse->getContent());
+        $this->get(route('employee.attendance.team.records', [
+            'employee_user_id' => 'EMP-3',
+            'from' => $selectedDate,
+            'to' => $today,
+        ]))->assertForbidden();
+
         $this->get(route('employee.attendance.team', ['date' => $selectedDate]))
             ->assertOk()
             ->assertSee('value="'.$selectedDate.'"', false)
@@ -717,6 +780,15 @@ class EmployeeGroupTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        DB::table('work_from_home_requests')->insert([
+            'user_id' => $member->user_id,
+            'start_date' => $today,
+            'end_date' => $today,
+            'reason' => 'Working remotely',
+            'status' => 'approved',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $response = $this->actingAs($supervisor->account)
             ->get(route('employee.attendance.team.export', [
@@ -731,6 +803,7 @@ class EmployeeGroupTest extends TestCase
         $this->assertStringContainsString('EMP-1,Supervisor,'.$today.',Present,08:00,12:00,12:30,30,17:00', $response->streamedContent());
         $this->assertStringContainsString('EMP-2,"Group Member",'.$today.',Present,08:30,12:30,13:00,30,17:30', $response->streamedContent());
         $this->assertStringContainsString('Duplicate check-in excluded.', $response->streamedContent());
+        $this->assertStringContainsString('Remote; Duplicate check-in excluded.', $response->streamedContent());
         $this->assertStringNotContainsString('Other Employee', $response->streamedContent());
         $this->assertStringNotContainsString('Absent', $response->streamedContent());
 
@@ -744,6 +817,7 @@ class EmployeeGroupTest extends TestCase
         $this->assertStringContainsString('Group Member', $memberResponse->streamedContent());
         $this->assertStringNotContainsString('Second Member', $memberResponse->streamedContent());
         $this->assertStringContainsString('EMP-1,Supervisor,'.$today.',Present,08:00,12:00,12:30,30,17:00', $memberResponse->streamedContent());
+        $this->assertStringContainsString('Remote; Duplicate check-in excluded.', $memberResponse->streamedContent());
         $this->assertStringNotContainsString('Other Employee', $memberResponse->streamedContent());
 
         $supervisorResponse = $this->get(route('employee.attendance.team.export', [

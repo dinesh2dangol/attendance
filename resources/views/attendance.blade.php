@@ -368,8 +368,8 @@
                                     {{ ucfirst(data_get($record, 'attendance_status', 'Present')) }}
                                 </span>
                                 <div class="attendance-details">
-                                    <div><span>In:</span> {{ data_get($record, 'first_punch') ?? '-' }}</div>
-                                    <div><span>Out:</span> {{ data_get($record, 'last_punch') ?? '-' }}</div>
+                                    <div><span>In:</span><br> {{ data_get($record, 'first_punch') ?? '-' }}</div>
+                                    <div><span>Out:</span><br> {{ data_get($record, 'last_punch') ?? '-' }}</div>
                                     @if ($isManualAttendance)
                                         <div><span>Category:</span> {{ $manualCategory ?? 'Not specified' }}</div>
                                     @else
@@ -386,16 +386,13 @@
                                         $p5 = data_get($record, 'punch_5');
                                         
                                         
-                                        $diff = ($p2 && $p3) 
-                                            ? \Carbon\Carbon::parse($p2)->diff(\Carbon\Carbon::parse($p3))->format('%H:%I:%S') 
+                                        $diff = ($p2 && $p3)
+                                            ? (int) round(abs(\Carbon\Carbon::parse($p2)->diffInSeconds(\Carbon\Carbon::parse($p3))) / 60)
                                             : '-';
                                     @endphp
-                                    <div><span>Lunch Out:</span> {{ $p2 ?? '-' }}</div>
-                                    <div><span>Lunch In:</span> {{ $p3 ?? '-' }}</div>
-                                    <div><span>Lunch Hour:</span> {{ $diff }}</div>
-                                    <span class="attendance-chip {{ Str::slug(data_get($record, 'attendance_status', 'present')) }}">
-                                        {{ data_get($record, 'lunch_hour') ?? '-' }}
-                                    </span>
+                                    <div><span>Lunch Out:</span><br> {{ filled($p2) ? $p2 : '-' }}</div>
+                                    <div><span>Lunch In:</span><br> {{ filled($p3) ? $p3 : '-' }}</div>
+                                    <div><span>Lunch Time:</span><br> {{ $diff !== '-' ? $diff.' min' : $diff }}</div>
                                     @endif
                                 </div>
                                 @endif

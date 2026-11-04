@@ -31,6 +31,9 @@
                     <a class="button secondary" href="{{ route('employee.groups') }}">My Groups</a>
                     <a class="button secondary" href="{{ route('employee.attendance.self') }}">My Attendance</a>
                 @endif
+                @if (auth()->user()->role?->slug === 'supervisor')
+                    <a class="button secondary" href="{{ route('employee.attendance.team.records') }}">View Attendance Records</a>
+                @endif
                 <a class="button secondary" href="{{ route('leaves.approval') }}">Leave Approvals</a>
                 <a class="button secondary" href="{{ route('wfh-requests.index') }}">WFH Requests</a>
                 <a class="button secondary" href="{{ route('dashboard') }}">Dashboard</a>
@@ -114,6 +117,11 @@
                             @php
                                 $supervisorAttendance = $attendanceByUser->get($supervisor->user_id);
                                 $supervisorSelection = $punchSelectionsByUser->get($supervisor->user_id);
+                                $supervisorWfhStatus = $wfhStatusByUser->get($supervisor->user_id);
+                                $supervisorRemoteRemark = $supervisorWfhStatus === 'Approved'
+                                    && in_array($supervisorAttendance?->attendance_status, ['Present', 'Remote'], true)
+                                        ? 'Remote'
+                                        : null;
                                 $hasSupervisorApproval = $supervisorAttendance?->supervisor_punch_selection_applied ?? false;
                                 $supervisorLunchOut = $hasSupervisorApproval
                                     ? ($supervisorAttendance->lunch_out ?? '-')
@@ -139,10 +147,13 @@
                                     @else
                                         <a href="{{ route('employee.attendance.self') }}">View Attendance</a>
                                     @endif
+                                    @if ($supervisorRemoteRemark)
+                                        <div><strong>Remarks:</strong> {{ $supervisorRemoteRemark }}</div>
+                                    @endif
                                     @if ($supervisorSelection)
                                         <small>Approved by {{ $supervisorSelection->approved_by_name ?? 'supervisor' }}</small>
                                         @if (filled($supervisorSelection->remarks))
-                                            <div><strong>Remarks:</strong> {{ $supervisorSelection->remarks }}</div>
+                                            <div><strong>Approval remarks:</strong> {{ $supervisorSelection->remarks }}</div>
                                         @endif
                                     @endif
                                 </td>
@@ -161,6 +172,11 @@
                             @php
                                 $attendance = $attendanceByUser->get($member->user_id);
                                 $selection = $punchSelectionsByUser->get($member->user_id);
+                                $wfhStatus = $wfhStatusByUser->get($member->user_id);
+                                $remoteRemark = $wfhStatus === 'Approved'
+                                    && in_array($attendance?->attendance_status, ['Present', 'Remote'], true)
+                                        ? 'Remote'
+                                        : null;
                                 $hasApprovedPunchSelection = $attendance?->supervisor_punch_selection_applied ?? false;
                                 $lunchOut = $hasApprovedPunchSelection
                                     ? ($attendance->lunch_out ?? '-')
@@ -196,7 +212,12 @@
                                     <td>-</td>
                                     <td>-</td>
                                 @endif
-                                <td><a href="{{ route('employee.attendance', $member) }}">View Attendance</a></td>
+                                <td>
+                                    <a href="{{ route('employee.attendance', $member) }}">View Attendance</a>
+                                    @if ($remoteRemark)
+                                        <div><strong>Remarks:</strong> {{ $remoteRemark }}</div>
+                                    @endif
+                                </td>
                                 <td>
                                     @if ($attendance && $canReviewPunches)
                                         <a class="button" href="{{ route('employee.attendance.team.punch-selection.edit', ['employee' => $member, 'date' => $attendanceDate->format('Y-m-d'), 'group_id' => $employeeGroup?->id]) }}">
@@ -205,13 +226,13 @@
                                         @if ($selection)
                                             <small>Approved by {{ $selection->approved_by_name ?? 'supervisor' }}</small>
                                             @if (filled($selection->remarks))
-                                                <div><strong>Remarks:</strong> {{ $selection->remarks }}</div>
+                                                <div><strong>Approval remarks:</strong> {{ $selection->remarks }}</div>
                                             @endif
                                         @endif
                                     @elseif ($attendance && $selection)
                                         <small>Approved by {{ $selection->approved_by_name ?? 'supervisor' }}</small>
                                         @if (filled($selection->remarks))
-                                            <div><strong>Remarks:</strong> {{ $selection->remarks }}</div>
+                                            <div><strong>Approval remarks:</strong> {{ $selection->remarks }}</div>
                                         @else
                                             -
                                         @endif

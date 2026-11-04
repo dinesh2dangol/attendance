@@ -251,6 +251,10 @@ Route::get('team-attendance', [EmployeePortalController::class, 'teamAttendance'
     ->middleware(['auth', 'role:supervisor'])
     ->name('employee.attendance.team');
 
+Route::get('team-attendance/records', [EmployeePortalController::class, 'teamMemberAttendance'])
+    ->middleware(['auth', 'role:supervisor'])
+    ->name('employee.attendance.team.records');
+
 Route::get('team-attendance/export', [EmployeePortalController::class, 'exportTeamAttendance'])
     ->middleware(['auth', 'role:supervisor,superadmin'])
     ->name('employee.attendance.team.export');

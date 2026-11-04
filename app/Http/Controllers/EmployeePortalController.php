@@ -62,6 +62,10 @@ class EmployeePortalController extends Controller
             $attendanceByUser,
             $punchSelectionsByUser
         );
+        $wfhStatusByUser = WorkFromHomeCalendar::statusesByUserForDate(
+            $attendanceUserIds,
+            $attendanceDate
+        );
         $employeeGroup = null;
         $canReviewPunches = true;
 
@@ -71,9 +75,84 @@ class EmployeePortalController extends Controller
             'attendanceDate',
             'attendanceByUser',
             'punchSelectionsByUser',
+            'wfhStatusByUser',
             'employeeGroup',
             'canReviewPunches'
         ));
+    }
+
+    public function teamMemberAttendance(Request $request)
+    {
+        $supervisor = $request->user()->employee;
+        $employees = SupervisorGroupAccess::members($request->user())
+            ->reject(fn ($member) => $member->user_id === $supervisor?->user_id)
+            ->push($supervisor)
+            ->filter()
+            ->filter(fn ($employee) => filled($employee->user_id))
+            ->unique('user_id')
+            ->sortBy('employee_name')
+            ->values();
+        $hasFilters = $request->hasAny(['employee_user_id', 'from', 'to']);
+        $validated = $hasFilters
+            ? $request->validate([
+                'employee_user_id' => ['required', 'string', 'max:50'],
+                'from' => ['required', 'date_format:Y-m-d'],
+                'to' => ['required', 'date_format:Y-m-d', 'after_or_equal:from'],
+            ])
+            : [];
+        $selectedEmployee = null;
+        $attendances = collect();
+        $punchSelectionsByDate = collect();
+
+        if ($hasFilters) {
+            $selectedEmployee = $employees->first(
+                fn ($employee) => (string) $employee->user_id === $validated['employee_user_id']
+            );
+            abort_unless($selectedEmployee, 403);
+
+            $attendances = DB::table('daily_attendance_step3')
+                ->where('user_id', $selectedEmployee->user_id)
+                ->whereBetween('attendance_date', [$validated['from'], $validated['to']])
+                ->orderBy('attendance_date')
+                ->get();
+            $punchSelectionsByDate = DB::table('supervisor_attendance_punch_selections')
+                ->leftJoin('users as approvers', 'approvers.id', '=', 'supervisor_attendance_punch_selections.approved_by')
+                ->where('supervisor_attendance_punch_selections.user_id', $selectedEmployee->user_id)
+                ->whereBetween('supervisor_attendance_punch_selections.attendance_date', [$validated['from'], $validated['to']])
+                ->select('supervisor_attendance_punch_selections.*', 'approvers.name as approved_by_name')
+                ->get()
+                ->keyBy(fn ($selection) => Carbon::parse($selection->attendance_date)->toDateString());
+            SupervisorAttendancePunchSelections::apply($attendances, $punchSelectionsByDate);
+            $rangeStart = Carbon::createFromFormat('Y-m-d', $validated['from']);
+            $rangeEnd = Carbon::createFromFormat('Y-m-d', $validated['to']);
+            $holidaysByDate = HolidayCalendar::byDate($selectedEmployee, $rangeStart, $rangeEnd);
+            $approvedWfhDates = WorkFromHomeCalendar::approvedDatesByDate(
+                $selectedEmployee->user_id,
+                $rangeStart,
+                $rangeEnd
+            );
+            $pendingWfhDates = WorkFromHomeCalendar::pendingDatesByDate(
+                $selectedEmployee->user_id,
+                $rangeStart,
+                $rangeEnd
+            );
+        }
+
+        return view('employee.team-attendance-records', [
+            'employees' => $employees,
+            'selectedEmployee' => $selectedEmployee,
+            'attendances' => $attendances,
+            'attendanceByDate' => $attendances->keyBy(
+                fn ($attendance) => Carbon::parse($attendance->attendance_date)->toDateString()
+            ),
+            'punchSelectionsByDate' => $punchSelectionsByDate,
+            'holidaysByDate' => $holidaysByDate ?? collect(),
+            'approvedWfhDates' => $approvedWfhDates ?? collect(),
+            'pendingWfhDates' => $pendingWfhDates ?? collect(),
+            'from' => $validated['from'] ?? Carbon::today()->startOfMonth()->toDateString(),
+            'to' => $validated['to'] ?? Carbon::today()->toDateString(),
+            'hasFilters' => $hasFilters,
+        ]);
     }
 
     public function exportTeamAttendance(Request $request): StreamedResponse
@@ -137,6 +216,7 @@ class EmployeePortalController extends Controller
                 ->select('supervisor_attendance_punch_selections.*', 'approvers.name as approved_by_name')
                 ->get();
         SupervisorAttendancePunchSelections::apply($attendanceRecords, $selections);
+        $remoteAttendanceKeys = WorkFromHomeCalendar::approvedAttendanceKeys($attendanceRecords);
 
         $employeesByUserId = $exportEmployees->keyBy('user_id');
         $selectionsByAttendance = $selections->keyBy(
@@ -147,7 +227,7 @@ class EmployeePortalController extends Controller
             : ($group ? 'group-attendance-'.$group->id : 'team-attendance');
         $filename = sprintf('%s-%s-to-%s.csv', $filenamePrefix, $validated['from'], $validated['to']);
 
-        return response()->streamDownload(function () use ($attendanceRecords, $employeesByUserId, $selectionsByAttendance): void {
+        return response()->streamDownload(function () use ($attendanceRecords, $employeesByUserId, $selectionsByAttendance, $remoteAttendanceKeys): void {
             $output = fopen('php://output', 'w');
             fwrite($output, "\xEF\xBB\xBF");
             fputcsv($output, [
@@ -177,6 +257,10 @@ class EmployeePortalController extends Controller
                     ? intdiv((int) abs(Carbon::parse($lunchOut)->diffInSeconds(Carbon::parse($lunchIn))), 60)
                     : null;
                 $employee = $employeesByUserId->get($attendance->user_id);
+                $remarks = collect([
+                    $remoteAttendanceKeys->has($attendance->user_id.'|'.$attendanceDate) ? 'Remote' : null,
+                    $selection?->remarks,
+                ])->filter()->implode('; ');
 
                 fputcsv($output, [
                     $this->excelSafeCell($attendance->user_id),
@@ -189,7 +273,7 @@ class EmployeePortalController extends Controller
                     $lunchMinutes,
                     $this->excelSafeCell($attendance->last_punch ?? ''),
                     $this->excelSafeCell($selection?->approved_by_name ?? ''),
-                    $this->excelSafeCell($selection?->remarks ?? ''),
+                    $this->excelSafeCell($remarks),
                 ]);
             }
 

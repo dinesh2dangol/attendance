@@ -6,6 +6,7 @@ use App\Models\Employee;
 use App\Models\EmployeeGroup;
 use App\Models\Role;
 use App\Support\SupervisorAttendancePunchSelections;
+use App\Support\WorkFromHomeCalendar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -57,6 +58,10 @@ class EmployeeGroupController extends Controller
                 ->get()
                 ->keyBy('user_id');
         SupervisorAttendancePunchSelections::apply($attendanceByUser, $punchSelectionsByUser);
+        $wfhStatusByUser = WorkFromHomeCalendar::statusesByUserForDate(
+            $attendanceUserIds,
+            $attendanceDate
+        );
         $canReviewPunches = true;
 
         return view('employee.team-attendance', compact(
@@ -65,6 +70,7 @@ class EmployeeGroupController extends Controller
             'attendanceDate',
             'attendanceByUser',
             'punchSelectionsByUser',
+            'wfhStatusByUser',
             'employeeGroup',
             'canReviewPunches'
         ));
