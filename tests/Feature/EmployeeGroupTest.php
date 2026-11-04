@@ -293,7 +293,10 @@ class EmployeeGroupTest extends TestCase
             ->assertSee('30 minutes')
             ->assertSee('Check Out')
             ->assertSee('Review Punches')
-            ->assertDontSee('<select', false)
+            ->assertSee('id="employee-user-id"', false)
+            ->assertSee($supervisor->user_id.'">'.$supervisor->employee_name.' (You)', false)
+            ->assertDontSee('name="lunch_out_punch"', false)
+            ->assertDontSee('name="lunch_in_punch"', false)
             ->assertDontSee('Absent')
             ->assertDontSee('09:00')
             ->assertSee(route('employee.attendance', $member), false)
@@ -303,8 +306,8 @@ class EmployeeGroupTest extends TestCase
             ->assertOk()
             ->getContent();
         $this->assertLessThan(
-            strpos($content, 'Group Member'),
-            strpos($content, 'Supervisor (You)')
+            strpos($content, '<td>Group Member</td>'),
+            strpos($content, '<td>Supervisor (You)</td>')
         );
 
         $selectedDate = now()->subDay()->toDateString();
@@ -401,7 +404,8 @@ class EmployeeGroupTest extends TestCase
             ->assertSee('30 minutes')
             ->assertSee('17:30')
             ->assertSee('Punch 2 was an accidental duplicate check-in.')
-            ->assertDontSee('<select', false);
+            ->assertDontSee('name="lunch_out_punch"', false)
+            ->assertDontSee('name="lunch_in_punch"', false);
 
         $this->post(route('employee.attendance.team.punch-selection', $other), [
             'date' => $today,
@@ -429,6 +433,7 @@ class EmployeeGroupTest extends TestCase
         });
         $supervisor = $this->createEmployeeWithAccount(1, 'EMP-1', 'Supervisor', 'supervisor');
         $member = $this->createEmployeeWithAccount(2, 'EMP-2', 'Group Member');
+        $secondMember = $this->createEmployeeWithAccount(4, 'EMP-4', 'Second Member');
         $other = $this->createEmployeeWithAccount(3, 'EMP-3', 'Other Employee');
         $groupId = DB::table('employee_groups')->insertGetId([
             'name' => 'Operations',
@@ -437,8 +442,14 @@ class EmployeeGroupTest extends TestCase
             'updated_at' => now(),
         ]);
         DB::table('employee_group_members')->insert([
-            'employee_group_id' => $groupId,
-            'employee_id' => $member->id,
+            [
+                'employee_group_id' => $groupId,
+                'employee_id' => $member->id,
+            ],
+            [
+                'employee_group_id' => $groupId,
+                'employee_id' => $secondMember->id,
+            ],
         ]);
         $today = now()->toDateString();
         $yesterday = now()->subDay()->toDateString();
@@ -470,6 +481,20 @@ class EmployeeGroupTest extends TestCase
                 'punch_3' => '12:30',
                 'punch_4' => '13:00',
                 'punch_5' => '17:30',
+            ],
+            [
+                'user_id' => 'EMP-4',
+                'attendance_date' => $today,
+                'attendance_status' => 'Present',
+                'first_punch' => '09:00',
+                'last_punch' => '18:00',
+                'lunch_out' => null,
+                'lunch_in' => null,
+                'punch_1' => '09:00',
+                'punch_2' => '12:00',
+                'punch_3' => '12:45',
+                'punch_4' => '18:00',
+                'punch_5' => null,
             ],
             [
                 'user_id' => 'EMP-2',
@@ -528,6 +553,34 @@ class EmployeeGroupTest extends TestCase
         $this->assertStringContainsString('Duplicate check-in excluded.', $response->streamedContent());
         $this->assertStringNotContainsString('Other Employee', $response->streamedContent());
         $this->assertStringNotContainsString('Absent', $response->streamedContent());
+
+        $memberResponse = $this->get(route('employee.attendance.team.export', [
+            'employee_user_id' => $member->user_id,
+            'from' => $today,
+            'to' => $today,
+        ]))
+            ->assertOk()
+            ->assertHeader('content-disposition', 'attachment; filename=employee-attendance-'.$member->id.'-'.$today.'-to-'.$today.'.csv');
+        $this->assertStringContainsString('Group Member', $memberResponse->streamedContent());
+        $this->assertStringNotContainsString('Second Member', $memberResponse->streamedContent());
+        $this->assertStringContainsString('EMP-1,Supervisor,'.$today.',Present,08:00,12:00,12:30,30,17:00', $memberResponse->streamedContent());
+        $this->assertStringNotContainsString('Other Employee', $memberResponse->streamedContent());
+
+        $supervisorResponse = $this->get(route('employee.attendance.team.export', [
+            'employee_user_id' => $supervisor->user_id,
+            'from' => $today,
+            'to' => $today,
+        ]))
+            ->assertOk()
+            ->assertHeader('content-disposition', 'attachment; filename=employee-attendance-'.$supervisor->id.'-'.$today.'-to-'.$today.'.csv');
+        $this->assertStringContainsString('EMP-1,Supervisor,'.$today.',Present,08:00,12:00,12:30,30,17:00', $supervisorResponse->streamedContent());
+        $this->assertStringNotContainsString('Group Member', $supervisorResponse->streamedContent());
+
+        $this->get(route('employee.attendance.team.export', [
+            'employee_user_id' => $other->user_id,
+            'from' => $today,
+            'to' => $today,
+        ]))->assertForbidden();
     }
 
     public function test_supervisor_can_approve_only_wfh_requests_for_group_members(): void

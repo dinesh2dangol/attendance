@@ -76,12 +76,26 @@ class EmployeePortalController extends Controller
         $validated = $request->validate([
             'from' => ['required', 'date_format:Y-m-d'],
             'to' => ['required', 'date_format:Y-m-d', 'after_or_equal:from'],
+            'employee_user_id' => ['sometimes', 'required', 'string', 'max:50'],
         ]);
         $supervisor = $request->user()->employee;
         $members = SupervisorGroupAccess::members($request->user())
             ->reject(fn ($member) => $member->user_id === $supervisor?->user_id);
-        $userIds = $members->pluck('user_id')
-            ->push($supervisor?->user_id)
+        $selectedMember = null;
+        if (isset($validated['employee_user_id'])) {
+            $selectedMember = $supervisor && (string) $supervisor->user_id === $validated['employee_user_id']
+                ? $supervisor
+                : $members->first(
+                    fn ($member) => (string) $member->user_id === $validated['employee_user_id']
+                );
+            abort_unless($selectedMember, 403);
+        }
+        $exportMembers = $selectedMember ? collect([$selectedMember]) : $members;
+        $userIds = $exportMembers->pluck('user_id')
+            ->when(
+                $selectedMember === null || (string) $selectedMember->user_id !== (string) $supervisor?->user_id,
+                fn ($ids) => $ids->push($supervisor?->user_id)
+            )
             ->filter()
             ->unique()
             ->values();
@@ -103,14 +117,20 @@ class EmployeePortalController extends Controller
                 ->get();
         SupervisorAttendancePunchSelections::apply($attendanceRecords, $selections);
 
-        $employeesByUserId = $members
-            ->push($supervisor)
+        $employeesByUserId = $exportMembers
+            ->when(
+                $selectedMember === null || (string) $selectedMember->user_id !== (string) $supervisor?->user_id,
+                fn ($employees) => $employees->push($supervisor)
+            )
             ->filter()
             ->keyBy('user_id');
         $selectionsByAttendance = $selections->keyBy(
             fn ($selection) => $selection->user_id.'|'.Carbon::parse($selection->attendance_date)->toDateString()
         );
-        $filename = sprintf('team-attendance-%s-to-%s.csv', $validated['from'], $validated['to']);
+        $filenamePrefix = $selectedMember
+            ? 'employee-attendance-'.$selectedMember->id
+            : 'team-attendance';
+        $filename = sprintf('%s-%s-to-%s.csv', $filenamePrefix, $validated['from'], $validated['to']);
 
         return response()->streamDownload(function () use ($attendanceRecords, $employeesByUserId, $selectionsByAttendance): void {
             $output = fopen('php://output', 'w');

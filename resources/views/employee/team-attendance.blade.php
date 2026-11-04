@@ -47,6 +47,26 @@
             <button class="button" type="submit">Export to Excel</button>
         </form>
 
+        @if ($members->isNotEmpty())
+            <form method="GET" action="{{ route('employee.attendance.team.export') }}">
+                <label for="employee-user-id">Team member</label>
+                <select id="employee-user-id" name="employee_user_id" required>
+                    <option value="">Select a team member</option>
+                    @if ($supervisor)
+                        <option value="{{ $supervisor->user_id }}">{{ $supervisor->employee_name }} (You)</option>
+                    @endif
+                    @foreach ($members as $member)
+                        <option value="{{ $member->user_id }}">{{ $member->employee_name }}</option>
+                    @endforeach
+                </select>
+                <label for="employee-attendance-from">Export from</label>
+                <input id="employee-attendance-from" type="date" name="from" value="{{ $attendanceDate->copy()->startOfMonth()->format('Y-m-d') }}" required>
+                <label for="employee-attendance-to">to</label>
+                <input id="employee-attendance-to" type="date" name="to" value="{{ $attendanceDate->format('Y-m-d') }}" required>
+                <button class="button" type="submit">Export Selected Employee</button>
+            </form>
+        @endif
+
         @if (session('success'))
             <p role="status">{{ session('success') }}</p>
         @endif
