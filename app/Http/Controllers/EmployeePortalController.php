@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Models\EmployeeGroup;
 use App\Support\HolidayCalendar;
 use App\Support\ManualAttendanceCategories;
 use App\Support\SupervisorAttendancePunchSelections;
@@ -81,28 +82,44 @@ class EmployeePortalController extends Controller
             'from' => ['required', 'date_format:Y-m-d'],
             'to' => ['required', 'date_format:Y-m-d', 'after_or_equal:from'],
             'employee_user_id' => ['sometimes', 'required', 'string', 'max:50'],
+            'group_id' => ['nullable', 'integer', 'exists:employee_groups,id'],
         ]);
-        $supervisor = $request->user()->employee;
-        $members = SupervisorGroupAccess::members($request->user())
-            ->reject(fn ($member) => $member->user_id === $supervisor?->user_id);
-        $selectedMember = null;
-        if (isset($validated['employee_user_id'])) {
-            $selectedMember = $supervisor && (string) $supervisor->user_id === $validated['employee_user_id']
-                ? $supervisor
-                : $members->first(
-                    fn ($member) => (string) $member->user_id === $validated['employee_user_id']
-                );
-            abort_unless($selectedMember, 403);
+        $user = $request->user();
+        $supervisor = $user->employee;
+        if ($user->role?->slug === 'superadmin') {
+            abort_unless(isset($validated['group_id']), 403);
+            $group = EmployeeGroup::with(['supervisor', 'members'])->findOrFail($validated['group_id']);
+            $supervisor = $group->supervisor;
+            $members = $group->members
+                ->reject(fn ($member) => $member->user_id === $supervisor?->user_id)
+                ->values();
+        } else {
+            $group = null;
+            $members = SupervisorGroupAccess::members($user)
+                ->reject(fn ($member) => $member->user_id === $supervisor?->user_id)
+                ->values();
         }
-        $exportMembers = $selectedMember ? collect([$selectedMember]) : $members;
-        $userIds = $exportMembers->pluck('user_id')
-            ->when(
-                $selectedMember === null || (string) $selectedMember->user_id !== (string) $supervisor?->user_id,
-                fn ($ids) => $ids->push($supervisor?->user_id)
-            )
+
+        $availableEmployees = $members
+            ->push($supervisor)
             ->filter()
-            ->unique()
+            ->unique('user_id')
             ->values();
+        $selectedEmployee = null;
+        if (isset($validated['employee_user_id'])) {
+            $selectedEmployee = $availableEmployees->first(
+                fn ($employee) => (string) $employee->user_id === $validated['employee_user_id']
+            );
+            abort_unless($selectedEmployee, 403);
+        }
+        $exportEmployees = $selectedEmployee
+            ? collect([$selectedEmployee])
+            : $availableEmployees;
+        if ($selectedEmployee && $supervisor && (string) $selectedEmployee->user_id !== (string) $supervisor->user_id) {
+            $exportEmployees->push($supervisor);
+        }
+        $exportEmployees = $exportEmployees->filter()->unique('user_id')->values();
+        $userIds = $exportEmployees->pluck('user_id')->filter()->unique()->values();
 
         $attendanceRecords = $userIds->isEmpty()
             ? collect()
@@ -121,19 +138,13 @@ class EmployeePortalController extends Controller
                 ->get();
         SupervisorAttendancePunchSelections::apply($attendanceRecords, $selections);
 
-        $employeesByUserId = $exportMembers
-            ->when(
-                $selectedMember === null || (string) $selectedMember->user_id !== (string) $supervisor?->user_id,
-                fn ($employees) => $employees->push($supervisor)
-            )
-            ->filter()
-            ->keyBy('user_id');
+        $employeesByUserId = $exportEmployees->keyBy('user_id');
         $selectionsByAttendance = $selections->keyBy(
             fn ($selection) => $selection->user_id.'|'.Carbon::parse($selection->attendance_date)->toDateString()
         );
-        $filenamePrefix = $selectedMember
-            ? 'employee-attendance-'.$selectedMember->id
-            : 'team-attendance';
+        $filenamePrefix = $selectedEmployee
+            ? 'employee-attendance-'.$selectedEmployee->id
+            : ($group ? 'group-attendance-'.$group->id : 'team-attendance');
         $filename = sprintf('%s-%s-to-%s.csv', $filenamePrefix, $validated['from'], $validated['to']);
 
         return response()->streamDownload(function () use ($attendanceRecords, $employeesByUserId, $selectionsByAttendance): void {
@@ -188,11 +199,11 @@ class EmployeePortalController extends Controller
 
     public function editTeamAttendancePunchSelection(Request $request, Employee $employee)
     {
-        abort_unless(SupervisorGroupAccess::canReview($request->user(), $employee->user_id), 403);
-
         $validated = $request->validate([
             'date' => ['required', 'date_format:Y-m-d'],
+            'group_id' => ['nullable', 'integer', 'exists:employee_groups,id'],
         ]);
+        abort_unless($this->canReviewAttendancePunches($request, $employee, $validated['group_id'] ?? null), 403);
         $attendance = DB::table('daily_attendance_step3')
             ->where('user_id', $employee->user_id)
             ->whereDate('attendance_date', $validated['date'])
@@ -215,28 +226,30 @@ class EmployeePortalController extends Controller
             ]
             : SupervisorAttendancePunchSelections::suggestedPunchNumbers($attendance);
         $attendanceDate = Carbon::createFromFormat('Y-m-d', $validated['date']);
+        $groupId = $validated['group_id'] ?? null;
 
         return view('employee.team-attendance-punch-selection', compact(
             'employee',
             'attendance',
             'attendanceDate',
             'selection',
-            'selectedPunchNumbers'
+            'selectedPunchNumbers',
+            'groupId'
         ));
     }
 
     public function saveTeamAttendancePunchSelection(Request $request, Employee $employee)
     {
-        abort_unless(SupervisorGroupAccess::canReview($request->user(), $employee->user_id), 403);
-
         $validated = $request->validate([
             'date' => ['required', 'date_format:Y-m-d'],
+            'group_id' => ['nullable', 'integer', 'exists:employee_groups,id'],
             'check_in_punch' => ['nullable', 'integer', 'between:1,5'],
             'lunch_out_punch' => ['nullable', 'integer', 'between:1,5'],
             'lunch_in_punch' => ['nullable', 'integer', 'between:1,5'],
             'check_out_punch' => ['nullable', 'integer', 'between:1,5'],
             'remarks' => ['nullable', 'string', 'max:2000'],
         ]);
+        abort_unless($this->canReviewAttendancePunches($request, $employee, $validated['group_id'] ?? null), 403);
         $attendance = DB::table('daily_attendance_step3')
             ->where('user_id', $employee->user_id)
             ->whereDate('attendance_date', $validated['date'])
@@ -288,9 +301,14 @@ class EmployeePortalController extends Controller
                 ->insert($selectionValues + $selectionKey + ['created_at' => now()]);
         }
 
-        return redirect()
-            ->route('employee.attendance.team', ['date' => $validated['date']])
-            ->with('success', 'Attendance punches approved.');
+        $redirect = isset($validated['group_id'])
+            ? redirect()->route('employee-groups.attendance', [
+                'employeeGroup' => $validated['group_id'],
+                'date' => $validated['date'],
+            ])
+            : redirect()->route('employee.attendance.team', ['date' => $validated['date']]);
+
+        return $redirect->with('success', 'Attendance punches approved.');
     }
 
     public function attendance(Request $request)
@@ -359,5 +377,26 @@ class EmployeePortalController extends Controller
         return preg_match('/^[\t\r\n ]*[=+\-@]/', $value ?? '') === 1
             ? "'".$value
             : ($value ?? '');
+    }
+
+    private function canReviewAttendancePunches(Request $request, Employee $employee, ?int $groupId = null): bool
+    {
+        $user = $request->user();
+        if ($user->role?->slug === 'supervisor') {
+            return $user->employee?->is($employee)
+                || SupervisorGroupAccess::canReview($user, $employee->user_id);
+        }
+
+        if ($user->role?->slug !== 'superadmin' || $groupId === null) {
+            return false;
+        }
+
+        return EmployeeGroup::query()
+            ->whereKey($groupId)
+            ->where(function ($query) use ($employee) {
+                $query->where('supervisor_employee_id', $employee->id)
+                    ->orWhereHas('members', fn ($members) => $members->whereKey($employee->id));
+            })
+            ->exists();
     }
 }

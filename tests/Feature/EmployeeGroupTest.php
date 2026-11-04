@@ -115,6 +115,20 @@ class EmployeeGroupTest extends TestCase
         $today = now()->toDateString();
         DB::table('daily_attendance_step3')->insert([
             [
+                'user_id' => $supervisor->user_id,
+                'attendance_date' => $today,
+                'attendance_status' => 'Present',
+                'first_punch' => '08:00',
+                'last_punch' => '17:00',
+                'lunch_out' => null,
+                'lunch_in' => null,
+                'punch_1' => '08:00',
+                'punch_2' => '12:00',
+                'punch_3' => '12:30',
+                'punch_4' => '17:00',
+                'punch_5' => null,
+            ],
+            [
                 'user_id' => $member->user_id,
                 'attendance_date' => $today,
                 'attendance_status' => 'Present',
@@ -152,11 +166,80 @@ class EmployeeGroupTest extends TestCase
         $this->get(route('employee-groups.attendance', ['employeeGroup' => $groupId, 'date' => $today]))
             ->assertOk()
             ->assertSee('Operations Attendance')
+            ->assertSee('Supervisor (Supervisor)')
+            ->assertSee(route('employee.attendance', $supervisor), false)
+            ->assertSee('08:00')
             ->assertSee('Group Member')
             ->assertSee('12:00')
+            ->assertSee('Review Punches')
+            ->assertSee('Export to Excel')
+            ->assertSee('Export Selected Employee')
+            ->assertSee('name="group_id"', false)
             ->assertDontSee('Other Employee')
-            ->assertDontSee('Review Punches')
-            ->assertDontSee('employee-user-id');
+            ->assertSee('employee-user-id');
+
+        $this->get(route('employee.attendance.team.punch-selection.edit', [
+            'employee' => $member,
+            'date' => $today,
+            'group_id' => $groupId,
+        ]))
+            ->assertOk()
+            ->assertSee('Review Attendance Punches')
+            ->assertSee('group_id', false);
+        $this->post(route('employee.attendance.team.punch-selection', $member), [
+            'date' => $today,
+            'group_id' => $groupId,
+            'check_in_punch' => '1',
+            'lunch_out_punch' => '2',
+            'lunch_in_punch' => '3',
+            'check_out_punch' => '4',
+        ])->assertRedirect(route('employee-groups.attendance', [
+            'employeeGroup' => $groupId,
+            'date' => $today,
+        ]));
+        $this->assertDatabaseHas('supervisor_attendance_punch_selections', [
+            'user_id' => $member->user_id,
+            'attendance_date' => $today,
+            'approved_by' => $superadmin->id,
+        ]);
+        $this->post(route('employee.attendance.team.punch-selection', $other), [
+            'date' => $today,
+            'group_id' => $groupId,
+            'check_in_punch' => '1',
+        ])->assertForbidden();
+
+        $this->get(route('employee.attendance.team.export', [
+            'group_id' => $groupId,
+            'from' => $today,
+            'to' => $today,
+        ]))
+            ->assertOk()
+            ->assertHeader('content-disposition', 'attachment; filename=group-attendance-'.$groupId.'-'.$today.'-to-'.$today.'.csv');
+        $groupExport = $this->get(route('employee.attendance.team.export', [
+            'group_id' => $groupId,
+            'from' => $today,
+            'to' => $today,
+        ]))->streamedContent();
+        $this->assertStringContainsString('Group Member', $groupExport);
+        $this->assertStringContainsString('Supervisor', $groupExport);
+        $this->assertStringNotContainsString('Other Employee', $groupExport);
+
+        $selectedExport = $this->get(route('employee.attendance.team.export', [
+            'group_id' => $groupId,
+            'employee_user_id' => $member->user_id,
+            'from' => $today,
+            'to' => $today,
+        ]))->streamedContent();
+        $this->assertStringContainsString('Group Member', $selectedExport);
+        $this->assertStringContainsString('Supervisor', $selectedExport);
+        $this->assertStringNotContainsString('Other Employee', $selectedExport);
+
+        $this->get(route('employee.attendance.team.export', [
+            'group_id' => $groupId,
+            'employee_user_id' => $other->user_id,
+            'from' => $today,
+            'to' => $today,
+        ]))->assertForbidden();
 
         $this->actingAs($supervisor->account)
             ->get(route('employee-groups.attendance', ['employeeGroup' => $groupId, 'date' => $today]))
@@ -389,6 +472,23 @@ class EmployeeGroupTest extends TestCase
             strpos($content, '<td>Group Member</td>'),
             strpos($content, '<td>Supervisor (You)</td>')
         );
+
+        $this->post(route('employee.attendance.team.punch-selection', $supervisor), [
+            'date' => $today,
+            'check_in_punch' => '1',
+            'lunch_out_punch' => '2',
+            'lunch_in_punch' => '3',
+            'check_out_punch' => '4',
+        ])->assertRedirect(route('employee.attendance.team', ['date' => $today]));
+        $this->assertDatabaseHas('supervisor_attendance_punch_selections', [
+            'user_id' => $supervisor->user_id,
+            'attendance_date' => $today,
+            'check_in_punch' => 1,
+            'lunch_out_punch' => 2,
+            'lunch_in_punch' => 3,
+            'check_out_punch' => 4,
+            'approved_by' => $supervisor->account->id,
+        ]);
 
         $selectedDate = now()->subDay()->toDateString();
         $this->get(route('employee.attendance.team', ['date' => $selectedDate]))

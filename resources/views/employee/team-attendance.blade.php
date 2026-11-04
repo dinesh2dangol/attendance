@@ -45,6 +45,9 @@
 
         @if ($canReviewPunches)
             <form method="GET" action="{{ route('employee.attendance.team.export') }}">
+                @if (isset($employeeGroup) && $employeeGroup)
+                    <input type="hidden" name="group_id" value="{{ $employeeGroup->id }}">
+                @endif
                 <label for="attendance-from">Export from</label>
                 <input id="attendance-from" type="date" name="from" value="{{ $attendanceDate->copy()->startOfMonth()->format('Y-m-d') }}" required>
                 <label for="attendance-to">to</label>
@@ -52,13 +55,16 @@
                 <button class="button" type="submit">Export to Excel</button>
             </form>
 
-            @if ($members->isNotEmpty())
+            @if ($members->isNotEmpty() || $supervisor)
                 <form method="GET" action="{{ route('employee.attendance.team.export') }}">
+                    @if (isset($employeeGroup) && $employeeGroup)
+                        <input type="hidden" name="group_id" value="{{ $employeeGroup->id }}">
+                    @endif
                     <label for="employee-user-id">Team member</label>
                     <select id="employee-user-id" name="employee_user_id" required>
                         <option value="">Select a team member</option>
                         @if ($supervisor)
-                            <option value="{{ $supervisor->user_id }}">{{ $supervisor->employee_name }} (You)</option>
+                            <option value="{{ $supervisor->user_id }}">{{ $supervisor->employee_name }} ({{ auth()->user()->role?->slug === 'superadmin' ? 'Supervisor' : 'You' }})</option>
                         @endif
                         @foreach ($members as $member)
                             <option value="{{ $member->user_id }}">{{ $member->employee_name }}</option>
@@ -85,7 +91,7 @@
             </ul>
         @endif
 
-        @if ($members->isEmpty())
+        @if ($members->isEmpty() && ! $supervisor)
             <p>No employees are assigned to your group yet.</p>
         @else
             <div class="table-wrap">
@@ -120,7 +126,7 @@
                                     : null;
                             @endphp
                             <tr>
-                                <td>{{ $supervisor->employee_name }} (You)</td>
+                                <td>{{ $supervisor->employee_name }} ({{ auth()->user()->role?->slug === 'superadmin' ? 'Supervisor' : 'You' }})</td>
                                 <td>{{ $supervisorAttendance?->attendance_status ?? 'Not recorded' }}</td>
                                 <td>{{ $supervisorAttendance?->first_punch ?? '-' }}</td>
                                 <td>{{ $supervisorLunchOut }}</td>
@@ -128,7 +134,11 @@
                                 <td>{{ $supervisorLunchMinutes !== null ? $supervisorLunchMinutes.' minutes' : '-' }}</td>
                                 <td>{{ $supervisorAttendance?->last_punch ?? '-' }}</td>
                                 <td>
-                                    <a href="{{ route('employee.attendance.self') }}">View Attendance</a>
+                                    @if (isset($employeeGroup) && $employeeGroup)
+                                        <a href="{{ route('employee.attendance', $supervisor) }}">View Attendance</a>
+                                    @else
+                                        <a href="{{ route('employee.attendance.self') }}">View Attendance</a>
+                                    @endif
                                     @if ($supervisorSelection)
                                         <small>Approved by {{ $supervisorSelection->approved_by_name ?? 'supervisor' }}</small>
                                         @if (filled($supervisorSelection->remarks))
@@ -136,7 +146,15 @@
                                         @endif
                                     @endif
                                 </td>
-                                <td>-</td>
+                                <td>
+                                    @if ($supervisorAttendance && $canReviewPunches)
+                                        <a class="button" href="{{ route('employee.attendance.team.punch-selection.edit', ['employee' => $supervisor, 'date' => $attendanceDate->format('Y-m-d'), 'group_id' => $employeeGroup?->id]) }}">
+                                            {{ $supervisorSelection ? 'Edit Approval' : 'Review Punches' }}
+                                        </a>
+                                    @else
+                                        -
+                                    @endif
+                                </td>
                             </tr>
                         @endif
                         @foreach ($members as $member)
@@ -181,7 +199,7 @@
                                 <td><a href="{{ route('employee.attendance', $member) }}">View Attendance</a></td>
                                 <td>
                                     @if ($attendance && $canReviewPunches)
-                                        <a class="button" href="{{ route('employee.attendance.team.punch-selection.edit', ['employee' => $member, 'date' => $attendanceDate->format('Y-m-d')]) }}">
+                                        <a class="button" href="{{ route('employee.attendance.team.punch-selection.edit', ['employee' => $member, 'date' => $attendanceDate->format('Y-m-d'), 'group_id' => $employeeGroup?->id]) }}">
                                             {{ $selection ? 'Edit Approval' : 'Review Punches' }}
                                         </a>
                                         @if ($selection)

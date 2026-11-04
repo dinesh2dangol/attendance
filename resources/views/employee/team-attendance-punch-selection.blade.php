@@ -23,7 +23,11 @@
                 <h1>Review Attendance Punches</h1>
                 <p>{{ $employee->employee_name }} — {{ $attendanceDate->format('Y-m-d') }}</p>
             </div>
-            <a class="button secondary" href="{{ route('employee.attendance.team', ['date' => $attendanceDate->format('Y-m-d')]) }}">Back to Team Attendance</a>
+            @if ($groupId)
+                <a class="button secondary" href="{{ route('employee-groups.attendance', ['employeeGroup' => $groupId, 'date' => $attendanceDate->format('Y-m-d')]) }}">Back to Group Attendance</a>
+            @else
+                <a class="button secondary" href="{{ route('employee.attendance.team', ['date' => $attendanceDate->format('Y-m-d')]) }}">Back to Team Attendance</a>
+            @endif
         </div>
 
         @if ($errors->any())
@@ -50,6 +54,9 @@
         <form method="POST" action="{{ route('employee.attendance.team.punch-selection', $employee) }}">
             @csrf
             <input type="hidden" name="date" value="{{ $attendanceDate->format('Y-m-d') }}">
+            @if ($groupId)
+                <input type="hidden" name="group_id" value="{{ $groupId }}">
+            @endif
 
             @foreach ([
                 'check_in_punch' => 'Check In',

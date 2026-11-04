@@ -252,15 +252,15 @@ Route::get('team-attendance', [EmployeePortalController::class, 'teamAttendance'
     ->name('employee.attendance.team');
 
 Route::get('team-attendance/export', [EmployeePortalController::class, 'exportTeamAttendance'])
-    ->middleware(['auth', 'role:supervisor'])
+    ->middleware(['auth', 'role:supervisor,superadmin'])
     ->name('employee.attendance.team.export');
 
 Route::get('team-attendance/{employee}/punch-selection', [EmployeePortalController::class, 'editTeamAttendancePunchSelection'])
-    ->middleware(['auth', 'role:supervisor'])
+    ->middleware(['auth', 'role:supervisor,superadmin'])
     ->name('employee.attendance.team.punch-selection.edit');
 
 Route::post('team-attendance/{employee}/punch-selection', [EmployeePortalController::class, 'saveTeamAttendancePunchSelection'])
-    ->middleware(['auth', 'role:supervisor'])
+    ->middleware(['auth', 'role:supervisor,superadmin'])
     ->name('employee.attendance.team.punch-selection');
 
 Route::get('my-groups', [EmployeePortalController::class, 'myGroups'])

@@ -31,29 +31,33 @@ class EmployeeGroupController extends Controller
         $attendanceDate = isset($validated['date'])
             ? Carbon::createFromFormat('Y-m-d', $validated['date'])
             : Carbon::today();
+        $supervisor = $employeeGroup->supervisor;
         $members = $employeeGroup->members()
             ->orderBy('employee_name')
             ->get();
-        $memberUserIds = $members->pluck('user_id')->filter()->unique()->values();
-        $attendanceByUser = $memberUserIds->isEmpty()
+        $attendanceUserIds = $members->pluck('user_id')
+            ->push($supervisor?->user_id)
+            ->filter()
+            ->unique()
+            ->values();
+        $attendanceByUser = $attendanceUserIds->isEmpty()
             ? collect()
             : DB::table('daily_attendance_step3')
-                ->whereIn('user_id', $memberUserIds)
+                ->whereIn('user_id', $attendanceUserIds)
                 ->whereDate('attendance_date', $attendanceDate->toDateString())
                 ->get()
                 ->keyBy('user_id');
-        $punchSelectionsByUser = $memberUserIds->isEmpty()
+        $punchSelectionsByUser = $attendanceUserIds->isEmpty()
             ? collect()
             : DB::table('supervisor_attendance_punch_selections')
                 ->leftJoin('users as approvers', 'approvers.id', '=', 'supervisor_attendance_punch_selections.approved_by')
-                ->whereIn('supervisor_attendance_punch_selections.user_id', $memberUserIds)
+                ->whereIn('supervisor_attendance_punch_selections.user_id', $attendanceUserIds)
                 ->whereDate('supervisor_attendance_punch_selections.attendance_date', $attendanceDate->toDateString())
                 ->select('supervisor_attendance_punch_selections.*', 'approvers.name as approved_by_name')
                 ->get()
                 ->keyBy('user_id');
         SupervisorAttendancePunchSelections::apply($attendanceByUser, $punchSelectionsByUser);
-        $supervisor = null;
-        $canReviewPunches = false;
+        $canReviewPunches = true;
 
         return view('employee.team-attendance', compact(
             'members',
