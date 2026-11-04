@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Employee;
 use App\Models\EmployeeGroup;
 use App\Models\Role;
+use App\Support\SupervisorAttendancePunchSelections;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class EmployeeGroupController extends Controller
 {
@@ -19,6 +21,49 @@ class EmployeeGroupController extends Controller
             ->paginate(20);
 
         return view('employee-groups.index', compact('groups'));
+    }
+
+    public function attendance(Request $request, EmployeeGroup $employeeGroup)
+    {
+        $validated = $request->validate([
+            'date' => ['sometimes', 'required', 'date_format:Y-m-d'],
+        ]);
+        $attendanceDate = isset($validated['date'])
+            ? Carbon::createFromFormat('Y-m-d', $validated['date'])
+            : Carbon::today();
+        $members = $employeeGroup->members()
+            ->orderBy('employee_name')
+            ->get();
+        $memberUserIds = $members->pluck('user_id')->filter()->unique()->values();
+        $attendanceByUser = $memberUserIds->isEmpty()
+            ? collect()
+            : DB::table('daily_attendance_step3')
+                ->whereIn('user_id', $memberUserIds)
+                ->whereDate('attendance_date', $attendanceDate->toDateString())
+                ->get()
+                ->keyBy('user_id');
+        $punchSelectionsByUser = $memberUserIds->isEmpty()
+            ? collect()
+            : DB::table('supervisor_attendance_punch_selections')
+                ->leftJoin('users as approvers', 'approvers.id', '=', 'supervisor_attendance_punch_selections.approved_by')
+                ->whereIn('supervisor_attendance_punch_selections.user_id', $memberUserIds)
+                ->whereDate('supervisor_attendance_punch_selections.attendance_date', $attendanceDate->toDateString())
+                ->select('supervisor_attendance_punch_selections.*', 'approvers.name as approved_by_name')
+                ->get()
+                ->keyBy('user_id');
+        SupervisorAttendancePunchSelections::apply($attendanceByUser, $punchSelectionsByUser);
+        $supervisor = null;
+        $canReviewPunches = false;
+
+        return view('employee.team-attendance', compact(
+            'members',
+            'supervisor',
+            'attendanceDate',
+            'attendanceByUser',
+            'punchSelectionsByUser',
+            'employeeGroup',
+            'canReviewPunches'
+        ));
     }
 
     public function create()

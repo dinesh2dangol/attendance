@@ -21,50 +21,57 @@
     <main class="container">
         <div class="toolbar">
             <div>
-                <h1>Team Attendance</h1>
+                <h1>{{ isset($employeeGroup) && $employeeGroup ? $employeeGroup->name.' Attendance' : 'Team Attendance' }}</h1>
                 <p>Review attendance punches for employees assigned to your group or groups.</p>
             </div>
             <div>
-                <a class="button secondary" href="{{ route('employee.groups') }}">My Groups</a>
-                <a class="button secondary" href="{{ route('employee.attendance.self') }}">My Attendance</a>
+                @if (auth()->user()->role?->slug === 'superadmin')
+                    <a class="button secondary" href="{{ route('employee-groups.index') }}">Employee Groups</a>
+                @else
+                    <a class="button secondary" href="{{ route('employee.groups') }}">My Groups</a>
+                    <a class="button secondary" href="{{ route('employee.attendance.self') }}">My Attendance</a>
+                @endif
                 <a class="button secondary" href="{{ route('leaves.approval') }}">Leave Approvals</a>
                 <a class="button secondary" href="{{ route('wfh-requests.index') }}">WFH Requests</a>
                 <a class="button secondary" href="{{ route('dashboard') }}">Dashboard</a>
             </div>
         </div>
 
-        <form method="GET" action="{{ route('employee.attendance.team') }}">
+        <form method="GET" action="{{ isset($employeeGroup) && $employeeGroup ? route('employee-groups.attendance', $employeeGroup) : route('employee.attendance.team') }}">
             <label for="attendance-date">Date</label>
             <input id="attendance-date" type="date" name="date" value="{{ $attendanceDate->format('Y-m-d') }}" required>
             <button class="button" type="submit">Show Attendance</button>
         </form>
 
-        <form method="GET" action="{{ route('employee.attendance.team.export') }}">
-            <label for="attendance-from">Export from</label>
-            <input id="attendance-from" type="date" name="from" value="{{ $attendanceDate->copy()->startOfMonth()->format('Y-m-d') }}" required>
-            <label for="attendance-to">to</label>
-            <input id="attendance-to" type="date" name="to" value="{{ $attendanceDate->format('Y-m-d') }}" required>
-            <button class="button" type="submit">Export to Excel</button>
-        </form>
-
-        @if ($members->isNotEmpty())
+        @if ($canReviewPunches)
             <form method="GET" action="{{ route('employee.attendance.team.export') }}">
-                <label for="employee-user-id">Team member</label>
-                <select id="employee-user-id" name="employee_user_id" required>
-                    <option value="">Select a team member</option>
-                    @if ($supervisor)
-                        <option value="{{ $supervisor->user_id }}">{{ $supervisor->employee_name }} (You)</option>
-                    @endif
-                    @foreach ($members as $member)
-                        <option value="{{ $member->user_id }}">{{ $member->employee_name }}</option>
-                    @endforeach
-                </select>
-                <label for="employee-attendance-from">Export from</label>
-                <input id="employee-attendance-from" type="date" name="from" value="{{ $attendanceDate->copy()->startOfMonth()->format('Y-m-d') }}" required>
-                <label for="employee-attendance-to">to</label>
-                <input id="employee-attendance-to" type="date" name="to" value="{{ $attendanceDate->format('Y-m-d') }}" required>
-                <button class="button" type="submit">Export Selected Employee</button>
+                <label for="attendance-from">Export from</label>
+                <input id="attendance-from" type="date" name="from" value="{{ $attendanceDate->copy()->startOfMonth()->format('Y-m-d') }}" required>
+                <label for="attendance-to">to</label>
+                <input id="attendance-to" type="date" name="to" value="{{ $attendanceDate->format('Y-m-d') }}" required>
+                <button class="button" type="submit">Export to Excel</button>
             </form>
+
+            @if ($members->isNotEmpty())
+                <form method="GET" action="{{ route('employee.attendance.team.export') }}">
+                    <label for="employee-user-id">Team member</label>
+                    <select id="employee-user-id" name="employee_user_id" required>
+                        <option value="">Select a team member</option>
+                        @if ($supervisor)
+                            <option value="{{ $supervisor->user_id }}">{{ $supervisor->employee_name }} (You)</option>
+                        @endif
+                        @foreach ($members as $member)
+                            <option value="{{ $member->user_id }}">{{ $member->employee_name }}</option>
+                        @endforeach
+                    </select>
+                    <label for="employee-attendance-from">Export from</label>
+                    <input id="employee-attendance-from" type="date" name="from" value="{{ $attendanceDate->copy()->startOfMonth()->format('Y-m-d') }}" required>
+                    <label for="employee-attendance-to">to</label>
+                    <input id="employee-attendance-to" type="date" name="to" value="{{ $attendanceDate->format('Y-m-d') }}" required>
+                    <button class="button" type="submit">Export Selected Employee</button>
+                </form>
+            @endif
+
         @endif
 
         @if (session('success'))
@@ -173,7 +180,7 @@
                                 @endif
                                 <td><a href="{{ route('employee.attendance', $member) }}">View Attendance</a></td>
                                 <td>
-                                    @if ($attendance)
+                                    @if ($attendance && $canReviewPunches)
                                         <a class="button" href="{{ route('employee.attendance.team.punch-selection.edit', ['employee' => $member, 'date' => $attendanceDate->format('Y-m-d')]) }}">
                                             {{ $selection ? 'Edit Approval' : 'Review Punches' }}
                                         </a>
@@ -182,6 +189,13 @@
                                             @if (filled($selection->remarks))
                                                 <div><strong>Remarks:</strong> {{ $selection->remarks }}</div>
                                             @endif
+                                        @endif
+                                    @elseif ($attendance && $selection)
+                                        <small>Approved by {{ $selection->approved_by_name ?? 'supervisor' }}</small>
+                                        @if (filled($selection->remarks))
+                                            <div><strong>Remarks:</strong> {{ $selection->remarks }}</div>
+                                        @else
+                                            -
                                         @endif
                                     @else
                                         -

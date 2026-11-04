@@ -41,7 +41,7 @@
             <div class="table-wrap">
                 <table>
                     <thead>
-                        <tr><th>Group</th><th>Supervisor</th><th>Employees</th><th>Action</th></tr>
+                        <tr><th>Group</th><th>Supervisor</th><th>Employees</th><th>Attendance</th><th>Action</th></tr>
                     </thead>
                     <tbody>
                         @foreach ($groups as $group)
@@ -49,6 +49,7 @@
                                 <td>{{ $group->name }}</td>
                                 <td>{{ $group->supervisor?->employee_name ?? 'Not assigned' }}</td>
                                 <td>{{ $group->members->pluck('employee_name')->join(', ') ?: 'No members' }}</td>
+                                <td><a href="{{ route('employee-groups.attendance', $group) }}">View Attendance</a></td>
                                 <td><a href="{{ route('employee-groups.edit', $group) }}">Edit</a></td>
                             </tr>
                         @endforeach

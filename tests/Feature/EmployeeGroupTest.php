@@ -83,6 +83,86 @@ class EmployeeGroupTest extends TestCase
             ->assertSee('WFH Requests');
     }
 
+    public function test_superadmin_can_view_attendance_for_a_specific_group(): void
+    {
+        $this->createGroupSchema();
+        Schema::create('daily_attendance_step3', function (Blueprint $table) {
+            $table->string('user_id');
+            $table->date('attendance_date');
+            $table->string('attendance_status');
+            $table->string('first_punch')->nullable();
+            $table->string('last_punch')->nullable();
+            $table->string('lunch_out')->nullable();
+            $table->string('lunch_in')->nullable();
+            foreach (range(1, 5) as $punchNumber) {
+                $table->string('punch_'.$punchNumber)->nullable();
+            }
+        });
+        $superadmin = $this->createUser('superadmin', 'root');
+        $supervisor = $this->createEmployeeWithAccount(1, 'EMP-1', 'Supervisor', 'supervisor');
+        $member = $this->createEmployeeWithAccount(2, 'EMP-2', 'Group Member');
+        $other = $this->createEmployeeWithAccount(3, 'EMP-3', 'Other Employee');
+        $groupId = DB::table('employee_groups')->insertGetId([
+            'name' => 'Operations',
+            'supervisor_employee_id' => $supervisor->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('employee_group_members')->insert([
+            'employee_group_id' => $groupId,
+            'employee_id' => $member->id,
+        ]);
+        $today = now()->toDateString();
+        DB::table('daily_attendance_step3')->insert([
+            [
+                'user_id' => $member->user_id,
+                'attendance_date' => $today,
+                'attendance_status' => 'Present',
+                'first_punch' => '08:30',
+                'last_punch' => '17:00',
+                'lunch_out' => null,
+                'lunch_in' => null,
+                'punch_1' => '08:30',
+                'punch_2' => '12:00',
+                'punch_3' => '12:30',
+                'punch_4' => '17:00',
+                'punch_5' => null,
+            ],
+            [
+                'user_id' => $other->user_id,
+                'attendance_date' => $today,
+                'attendance_status' => 'Present',
+                'first_punch' => '09:00',
+                'last_punch' => '17:00',
+                'lunch_out' => null,
+                'lunch_in' => null,
+                'punch_1' => '09:00',
+                'punch_2' => '12:00',
+                'punch_3' => '12:30',
+                'punch_4' => '17:00',
+                'punch_5' => null,
+            ],
+        ]);
+
+        $this->actingAs($superadmin)
+            ->get(route('employee-groups.index'))
+            ->assertOk()
+            ->assertSee(route('employee-groups.attendance', $groupId), false);
+
+        $this->get(route('employee-groups.attendance', ['employeeGroup' => $groupId, 'date' => $today]))
+            ->assertOk()
+            ->assertSee('Operations Attendance')
+            ->assertSee('Group Member')
+            ->assertSee('12:00')
+            ->assertDontSee('Other Employee')
+            ->assertDontSee('Review Punches')
+            ->assertDontSee('employee-user-id');
+
+        $this->actingAs($supervisor->account)
+            ->get(route('employee-groups.attendance', ['employeeGroup' => $groupId, 'date' => $today]))
+            ->assertForbidden();
+    }
+
     public function test_changing_a_groups_supervisor_updates_both_account_roles(): void
     {
         $this->createGroupSchema();

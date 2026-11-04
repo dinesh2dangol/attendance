@@ -61,13 +61,17 @@ class EmployeePortalController extends Controller
             $attendanceByUser,
             $punchSelectionsByUser
         );
+        $employeeGroup = null;
+        $canReviewPunches = true;
 
         return view('employee.team-attendance', compact(
             'members',
             'supervisor',
             'attendanceDate',
             'attendanceByUser',
-            'punchSelectionsByUser'
+            'punchSelectionsByUser',
+            'employeeGroup',
+            'canReviewPunches'
         ));
     }
 

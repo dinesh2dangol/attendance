@@ -207,6 +207,7 @@ Route::get('employees/{employee}/attendance', function (App\Models\Employee $emp
 Route::middleware('auth')->group(function () {
     Route::middleware('role:superadmin')->group(function () {
         Route::get('employee-groups', [EmployeeGroupController::class, 'index'])->name('employee-groups.index');
+        Route::get('employee-groups/{employeeGroup}/attendance', [EmployeeGroupController::class, 'attendance'])->name('employee-groups.attendance');
         Route::get('employee-groups/create', [EmployeeGroupController::class, 'create'])->name('employee-groups.create');
         Route::post('employee-groups', [EmployeeGroupController::class, 'store'])->name('employee-groups.store');
         Route::get('employee-groups/{employeeGroup}/edit', [EmployeeGroupController::class, 'edit'])->name('employee-groups.edit');
