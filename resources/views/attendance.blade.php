@@ -35,6 +35,8 @@
         .calendar-weekday { text-align: center; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; padding: 0.65rem 0; }
         .calendar-day { min-height: 130px; border-radius: 1rem; padding: 0.9rem; background: #f8fafc; display: flex; flex-direction: column; justify-content: flex-start; gap: 0.75rem; border: 1px solid transparent; transition: border-color 160ms ease, transform 160ms ease; }
         .calendar-day:hover { transform: translateY(-1px); border-color: #93c5fd; }
+        .calendar-day.holiday,
+        .calendar-day.weekend { background: #fecaca; }
         .calendar-day.empty { background: #f1f5f9; color: #94a3b8; box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12); }
         .calendar-day.other-month { background: transparent; color: #94a3b8; box-shadow: none; border-color: transparent; }
         .calendar-day.other-month .attendance-chip,
@@ -239,8 +241,12 @@
                             data_get($record, 'day_type') === 'Weekend'
                             && in_array(data_get($record, 'attendance_status'), ['Present', 'Remote'], true)
                         );
+                        $isWeekend = $dayRecords->contains(fn ($record) => data_get($record, 'day_type') === 'Weekend');
+                        $dayClasses = $isCurrentMonth
+                            ? trim(($holiday ? 'holiday ' : '') . ($isWeekend ? 'weekend' : ''))
+                            : 'other-month';
                     @endphp
-                    <div class="calendar-day{{ $isCurrentMonth ? '' : ' other-month' }}">
+                    <div class="calendar-day {{ $dayClasses }}">
                         <div class="calendar-day-week">{{ $day->format('D') }}</div>
                         <div class="calendar-day-date">{{ $day->format('j') }}</div>
                             @if ($pendingWfh)

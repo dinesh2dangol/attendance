@@ -24,8 +24,18 @@ class EmployeePortalController extends Controller
     public function teamAttendance(Request $request)
     {
         $members = SupervisorGroupAccess::members($request->user());
+        $today = Carbon::today();
+        $memberUserIds = $members->pluck('user_id')->filter()->unique()->values();
+        $todayAttendanceByUser = $memberUserIds->isEmpty()
+            ? collect()
+            : DB::table('daily_attendance_step3')
+                ->whereIn('user_id', $memberUserIds)
+                ->whereDate('attendance_date', $today->toDateString())
+                ->select('user_id', 'attendance_status', 'first_punch', 'last_punch')
+                ->get()
+                ->keyBy('user_id');
 
-        return view('employee.team-attendance', compact('members'));
+        return view('employee.team-attendance', compact('members', 'today', 'todayAttendanceByUser'));
     }
 
     public function attendance(Request $request)

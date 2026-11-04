@@ -38,12 +38,22 @@
             <div class="table-wrap">
                 <table>
                     <thead>
-                        <tr><th>Employee</th><th>Attendance</th></tr>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Today's Attendance ({{ $today->format('Y-m-d') }})</th>
+                            <th>Check In</th>
+                            <th>Check Out</th>
+                            <th>History</th>
+                        </tr>
                     </thead>
                     <tbody>
                         @foreach ($members as $member)
+                            @php $todayAttendance = $todayAttendanceByUser->get($member->user_id); @endphp
                             <tr>
                                 <td>{{ $member->employee_name }}</td>
+                                <td>{{ $todayAttendance?->attendance_status ?? 'Not recorded' }}</td>
+                                <td>{{ $todayAttendance?->first_punch ?? '-' }}</td>
+                                <td>{{ $todayAttendance?->last_punch ?? '-' }}</td>
                                 <td><a href="{{ route('employee.attendance', $member) }}">View Attendance</a></td>
                             </tr>
                         @endforeach
