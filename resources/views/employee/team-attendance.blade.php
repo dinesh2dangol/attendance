@@ -178,6 +178,8 @@
                                 $attendance = $attendanceByUser->get($member->user_id);
                                 $selection = $punchSelectionsByUser->get($member->user_id);
                                 $wfhStatus = $wfhStatusByUser->get($member->user_id);
+                                $needsWfhPresence = $wfhStatus === 'Approved'
+                                    && ! in_array($attendance?->attendance_status, ['Present', 'Remote', 'Leave'], true);
                                 $remoteRemark = $wfhStatus === 'Approved'
                                     && in_array($attendance?->attendance_status, ['Present', 'Remote'], true)
                                         ? 'Remote'
@@ -199,6 +201,14 @@
                                     {{ $attendance?->attendance_status ?? 'Not recorded' }}
                                     @if ($wfhStatus)
                                         <div><strong>WFH:</strong> {{ $wfhStatus }}</div>
+                                    @endif
+                                    @if ($needsWfhPresence)
+                                        <a class="button" href="{{ route('manual-attendance.create', [
+                                            'user_id' => $member->user_id,
+                                            'timestamp' => $attendanceDate->format('Y-m-d').'T09:00',
+                                            'status' => '1',
+                                            'reason' => 'WFH',
+                                        ]) }}">Mark Present</a>
                                     @endif
                                 </td>
                                 @if ($attendance)

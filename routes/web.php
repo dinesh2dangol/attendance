@@ -230,6 +230,9 @@ Route::middleware('auth')->group(function () {
         Route::post('leaves', [LeaveController::class, 'store'])->name('leaves.store');
         Route::get('leaves/{leave}/edit', [LeaveController::class, 'edit'])->name('leaves.edit');
         Route::put('leaves/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
+    });
+
+    Route::middleware('role:admin,superadmin,supervisor')->group(function () {
         Route::get('manual-attendance/create', [ManualAttendanceController::class, 'create'])->name('manual-attendance.create');
         Route::post('manual-attendance', [ManualAttendanceController::class, 'store'])->name('manual-attendance.store');
     });

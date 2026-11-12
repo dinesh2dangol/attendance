@@ -263,7 +263,7 @@
                                     <div><span>Date:</span> {{ $dateKey }}</div>
                                     <div>Approved WFH - attendance not marked</div>
                                 </div>
-                                @if (in_array(auth()->user()->role?->slug, ['admin', 'superadmin'], true))
+                                @if (in_array(auth()->user()->role?->slug, ['admin', 'superadmin', 'supervisor'], true))
                                     <a class="button button-secondary" href="{{ route('manual-attendance.create', ['user_id' => $employee->user_id, 'timestamp' => $dateKey . 'T09:00', 'status' => '1', 'reason' => 'WFH']) }}" style="font-size: 0.75rem; padding: 0.5rem 0.7rem; margin-top: 0.15rem;">Mark Present</a>
                                 @endif
                             @elseif ($holiday)

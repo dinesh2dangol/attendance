@@ -380,6 +380,7 @@ class EmployeeGroupTest extends TestCase
         $supervisor = $this->createEmployeeWithAccount(1, 'EMP-1', 'Supervisor', 'supervisor');
         $member = $this->createEmployeeWithAccount(2, 'EMP-2', 'Group Member');
         $other = $this->createEmployeeWithAccount(3, 'EMP-3', 'Other Employee');
+        $wfhMember = $this->createEmployeeWithAccount(4, 'EMP-4', 'WFH Member');
         $groupId = DB::table('employee_groups')->insertGetId([
             'name' => 'Operations',
             'supervisor_employee_id' => $supervisor->id,
@@ -389,6 +390,10 @@ class EmployeeGroupTest extends TestCase
         DB::table('employee_group_members')->insert([
             'employee_group_id' => $groupId,
             'employee_id' => $member->id,
+        ]);
+        DB::table('employee_group_members')->insert([
+            'employee_group_id' => $groupId,
+            'employee_id' => $wfhMember->id,
         ]);
         $today = now()->toDateString();
         $yesterday = now()->subDay()->toDateString();
@@ -400,6 +405,7 @@ class EmployeeGroupTest extends TestCase
         DB::table('work_from_home_requests')->insert([
             ['user_id' => 'EMP-2', 'start_date' => $yesterday, 'end_date' => $yesterday, 'reason' => 'Test request', 'status' => 'pending'],
             ['user_id' => 'EMP-2', 'start_date' => $today, 'end_date' => $today, 'reason' => 'Test request', 'status' => 'approved'],
+            ['user_id' => 'EMP-4', 'start_date' => $today, 'end_date' => $today, 'reason' => 'Test request', 'status' => 'approved'],
         ]);
         DB::table('daily_attendance_step3')->insert([
             [
@@ -471,6 +477,14 @@ class EmployeeGroupTest extends TestCase
             ->assertSee($today)
             ->assertSee('Present')
             ->assertSee('<strong>WFH:</strong> Approved', false)
+            ->assertSee('WFH Member')
+            ->assertSee(route('manual-attendance.create', [
+                'user_id' => $wfhMember->user_id,
+                'timestamp' => $today.'T09:00',
+                'status' => '1',
+                'reason' => 'WFH',
+            ]), false)
+            ->assertSee('Mark Present')
             ->assertSee('Remote')
             ->assertDontSee('<th>WFH</th>', false)
             ->assertSee('08:30')
@@ -898,6 +912,105 @@ class EmployeeGroupTest extends TestCase
             ->get(route('employee.leaves.create'))
             ->assertOk();
         $this->get(route('employee.wfh.create'))->assertOk();
+    }
+
+    public function test_supervisor_can_mark_present_only_for_group_members_with_approved_wfh(): void
+    {
+        $this->createGroupSchema();
+        Schema::create('ManualAttendance', function (Blueprint $table) {
+            $table->string('user_id');
+            $table->dateTime('timestamp');
+            $table->integer('status');
+            $table->string('punch_type');
+            $table->string('category')->nullable();
+            $table->text('remarks')->nullable();
+        });
+
+        $supervisor = $this->createEmployeeWithAccount(1, 'EMP-1', 'Supervisor', 'supervisor');
+        $member = $this->createEmployeeWithAccount(2, 'EMP-2', 'Group Member');
+        $other = $this->createEmployeeWithAccount(3, 'EMP-3', 'Other Employee');
+        $groupId = DB::table('employee_groups')->insertGetId([
+            'name' => 'Operations',
+            'supervisor_employee_id' => $supervisor->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('employee_group_members')->insert([
+            'employee_group_id' => $groupId,
+            'employee_id' => $member->id,
+        ]);
+        $date = '2026-11-12';
+        DB::table('work_from_home_requests')->insert([
+            [
+                'user_id' => $member->user_id,
+                'start_date' => $date,
+                'end_date' => $date,
+                'reason' => 'Working remotely',
+                'status' => 'approved',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'user_id' => $other->user_id,
+                'start_date' => $date,
+                'end_date' => $date,
+                'reason' => 'Working remotely',
+                'status' => 'approved',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->actingAs($supervisor->account)
+            ->get(route('manual-attendance.create', [
+                'user_id' => $member->user_id,
+                'timestamp' => $date.'T09:00',
+                'status' => '1',
+                'reason' => 'WFH',
+            ]))
+            ->assertOk()
+            ->assertSee('Group Member')
+            ->assertSee('value="WFH" selected', false);
+
+        $this->post(route('manual-attendance.store'), [
+            'user_id' => $member->user_id,
+            'attendance_date' => $date,
+            'status' => '1',
+            'reason' => 'WFH',
+            'punch_IN' => '09:00',
+            'punch_OUT' => '17:00',
+        ])->assertRedirect(route('employee.attendance', [
+            'employee' => $member,
+            'month' => 11,
+            'year' => 2026,
+        ]));
+
+        $this->assertDatabaseHas('ManualAttendance', [
+            'user_id' => $member->user_id,
+            'timestamp' => $date.' 09:00:00',
+            'status' => 1,
+            'punch_type' => 'IN',
+            'category' => 'WFH',
+        ]);
+        $this->assertDatabaseCount('ManualAttendance', 2);
+
+        $this->post(route('manual-attendance.store'), [
+            'user_id' => $other->user_id,
+            'attendance_date' => $date,
+            'status' => '1',
+            'reason' => 'WFH',
+            'punch_IN' => '09:00',
+            'punch_OUT' => '17:00',
+        ])->assertForbidden();
+
+        $this->post(route('manual-attendance.store'), [
+            'user_id' => $member->user_id,
+            'attendance_date' => $date,
+            'status' => '1',
+            'reason' => 'Forgot',
+            'punch_IN' => '09:00',
+            'punch_OUT' => '17:00',
+        ])->assertForbidden();
     }
 
     private function createGroupSchema(): void

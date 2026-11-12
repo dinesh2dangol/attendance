@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use App\Support\ManualAttendanceCategories;
+use App\Support\SupervisorGroupAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
@@ -13,14 +14,44 @@ class ManualAttendanceController extends Controller
 {
     public function create(Request $request)
     {
-        $employees = Employee::orderBy('employee_name')->get();
+        $selectedUserId = $request->query('user_id');
+        $selectedTimestamp = $request->query('timestamp');
+        $selectedStatus = $request->query('status');
+        $selectedReason = $request->query('reason');
+
+        if ($request->user()->role?->slug === 'supervisor') {
+            $validated = $request->validate([
+                'user_id' => ['required', 'string', 'exists:employees,user_id'],
+                'timestamp' => ['required', 'date'],
+                'status' => ['required', 'integer', 'in:1'],
+                'reason' => ['required', 'string', Rule::in(['WFH'])],
+            ]);
+            $selectedUserId = $validated['user_id'];
+            $selectedTimestamp = $validated['timestamp'];
+            $selectedStatus = (string) $validated['status'];
+            $selectedReason = $validated['reason'];
+
+            $this->authorizeApprovedWfhAttendance(
+                $request,
+                $selectedUserId,
+                Carbon::parse($selectedTimestamp)->toDateString(),
+                1,
+                'WFH'
+            );
+            $employees = Employee::whereIn(
+                'user_id',
+                SupervisorGroupAccess::memberUserIds($request->user())
+            )->orderBy('employee_name')->get();
+        } else {
+            $employees = Employee::orderBy('employee_name')->get();
+        }
 
         return view('manual-attendance.create', [
             'employees' => $employees,
-            'selectedUserId' => $request->query('user_id'),
-            'selectedTimestamp' => $request->query('timestamp'),
-            'selectedStatus' => $request->query('status'),
-            'selectedReason' => $request->query('reason'),
+            'selectedUserId' => $selectedUserId,
+            'selectedTimestamp' => $selectedTimestamp,
+            'selectedStatus' => $selectedStatus,
+            'selectedReason' => $selectedReason,
             'reasons' => ManualAttendanceCategories::REASONS,
         ]);
     }
@@ -43,6 +74,13 @@ class ManualAttendanceController extends Controller
         }
 
         $validated = $request->validate($rules);
+        $this->authorizeApprovedWfhAttendance(
+            $request,
+            $validated['user_id'],
+            Carbon::parse($validated['attendance_date'])->toDateString(),
+            (int) $validated['status'],
+            $validated['reason']
+        );
 
         if ($status === 1) {
             $punchTypes = ['IN', 'OUT', 'LUNCH_IN', 'LUNCH_OUT'];
@@ -103,5 +141,30 @@ class ManualAttendanceController extends Controller
             'month' => $attendanceDate->month,
             'year' => $attendanceDate->year,
         ])->with('success', 'Manual attendance added successfully.');
+    }
+
+    private function authorizeApprovedWfhAttendance(
+        Request $request,
+        string $userId,
+        string $attendanceDate,
+        int $status,
+        string $reason
+    ): void {
+        if ($request->user()->role?->slug !== 'supervisor') {
+            return;
+        }
+
+        abort_unless(
+            $status === 1
+                && $reason === 'WFH'
+                && SupervisorGroupAccess::canReview($request->user(), $userId)
+                && DB::table('work_from_home_requests')
+                    ->where('user_id', $userId)
+                    ->where('status', 'approved')
+                    ->whereDate('start_date', '<=', $attendanceDate)
+                    ->whereDate('end_date', '>=', $attendanceDate)
+                    ->exists(),
+            403
+        );
     }
 }
