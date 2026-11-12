@@ -135,7 +135,12 @@
                             @endphp
                             <tr>
                                 <td>{{ $supervisor->employee_name }} ({{ auth()->user()->role?->slug === 'superadmin' ? 'Supervisor' : 'You' }})</td>
-                                <td>{{ $supervisorAttendance?->attendance_status ?? 'Not recorded' }}</td>
+                                <td>
+                                    {{ $supervisorAttendance?->attendance_status ?? 'Not recorded' }}
+                                    @if ($supervisorWfhStatus)
+                                        <div><strong>WFH:</strong> {{ $supervisorWfhStatus }}</div>
+                                    @endif
+                                </td>
                                 <td>{{ $supervisorAttendance?->first_punch ?? '-' }}</td>
                                 <td>{{ $supervisorLunchOut }}</td>
                                 <td>{{ $supervisorLunchIn }}</td>
@@ -190,7 +195,12 @@
                             @endphp
                             <tr>
                                 <td>{{ $member->employee_name }}</td>
-                                <td>{{ $attendance?->attendance_status ?? 'Not recorded' }}</td>
+                                <td>
+                                    {{ $attendance?->attendance_status ?? 'Not recorded' }}
+                                    @if ($wfhStatus)
+                                        <div><strong>WFH:</strong> {{ $wfhStatus }}</div>
+                                    @endif
+                                </td>
                                 @if ($attendance)
                                     <td>
                                         {{ $attendance->first_punch ?? '-' }}
