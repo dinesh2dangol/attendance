@@ -207,10 +207,8 @@ class EmployeePortalController extends Controller
         $selections = $userIds->isEmpty()
             ? collect()
             : DB::table('supervisor_attendance_punch_selections')
-                ->leftJoin('users as approvers', 'approvers.id', '=', 'supervisor_attendance_punch_selections.approved_by')
                 ->whereIn('supervisor_attendance_punch_selections.user_id', $userIds)
                 ->whereBetween('supervisor_attendance_punch_selections.attendance_date', [$validated['from'], $validated['to']])
-                ->select('supervisor_attendance_punch_selections.*', 'approvers.name as approved_by_name')
                 ->get();
         SupervisorAttendancePunchSelections::apply($attendanceRecords, $selections);
         $remoteAttendanceKeys = WorkFromHomeCalendar::approvedAttendanceKeys($attendanceRecords);
@@ -237,7 +235,6 @@ class EmployeePortalController extends Controller
                 'Lunch In',
                 'Lunch Time (minutes)',
                 'Check Out',
-                'Approved By',
                 'Remarks',
             ]);
 
@@ -269,7 +266,6 @@ class EmployeePortalController extends Controller
                     $this->excelSafeCell($lunchIn ?? ''),
                     $lunchMinutes,
                     $this->excelSafeCell($attendance->last_punch ?? ''),
-                    $this->excelSafeCell($selection?->approved_by_name ?? ''),
                     $this->excelSafeCell($remarks),
                 ]);
             }
