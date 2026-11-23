@@ -193,7 +193,9 @@ class EmployeePortalController extends Controller
         }
         $exportEmployees = $selectedEmployee
             ? collect([$selectedEmployee])
-            : $availableEmployees;
+            : ($group
+                ? $members->reject(fn ($employee) => (int) $employee->id === (int) $group->supervisor_employee_id)
+                : $availableEmployees);
         $exportEmployees = $exportEmployees->filter()->unique('user_id')->values();
         $userIds = $exportEmployees->pluck('user_id')->filter()->unique()->values();
 

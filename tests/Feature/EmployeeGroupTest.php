@@ -230,7 +230,7 @@ class EmployeeGroupTest extends TestCase
             'to' => $today,
         ]))->streamedContent();
         $this->assertStringContainsString('Group Member', $groupExport);
-        $this->assertStringContainsString('Supervisor', $groupExport);
+        $this->assertStringNotContainsString('EMP-1,Supervisor,'.$today.',', $groupExport);
         $this->assertStringNotContainsString('Other Employee', $groupExport);
 
         $selectedExport = $this->get(route('employee.attendance.team.export', [
@@ -240,7 +240,7 @@ class EmployeeGroupTest extends TestCase
             'to' => $today,
         ]))->streamedContent();
         $this->assertStringContainsString('Group Member', $selectedExport);
-        $this->assertStringContainsString('Supervisor', $selectedExport);
+        $this->assertStringNotContainsString('EMP-1,Supervisor,'.$today.',', $selectedExport);
         $this->assertStringNotContainsString('Other Employee', $selectedExport);
 
         $this->get(route('employee.attendance.team.export', [
