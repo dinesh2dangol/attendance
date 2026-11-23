@@ -194,9 +194,6 @@ class EmployeePortalController extends Controller
         $exportEmployees = $selectedEmployee
             ? collect([$selectedEmployee])
             : $availableEmployees;
-        if ($selectedEmployee && $supervisor && (string) $selectedEmployee->user_id !== (string) $supervisor->user_id) {
-            $exportEmployees->push($supervisor);
-        }
         $exportEmployees = $exportEmployees->filter()->unique('user_id')->values();
         $userIds = $exportEmployees->pluck('user_id')->filter()->unique()->values();
 

@@ -831,7 +831,7 @@ class EmployeeGroupTest extends TestCase
             ->assertHeader('content-disposition', 'attachment; filename=employee-attendance-'.$member->id.'-'.$today.'-to-'.$today.'.csv');
         $this->assertStringContainsString('Group Member', $memberResponse->streamedContent());
         $this->assertStringNotContainsString('Second Member', $memberResponse->streamedContent());
-        $this->assertStringContainsString('EMP-1,Supervisor,'.$today.',Present,08:00,12:00,12:30,30,17:00', $memberResponse->streamedContent());
+        $this->assertStringNotContainsString('EMP-1,Supervisor,'.$today.',', $memberResponse->streamedContent());
         $this->assertStringContainsString('Remote; Duplicate check-in excluded.', $memberResponse->streamedContent());
         $this->assertStringNotContainsString('Other Employee', $memberResponse->streamedContent());
 
