@@ -17,6 +17,8 @@ use App\Http\Controllers\EmployeeGroupController;
 use App\Http\Controllers\EmployeeAccountController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\ManualAttendanceController;
+use App\Http\Controllers\MeetingRoomBookingController;
+use App\Http\Controllers\MeetingRoomController;
 use App\Http\Controllers\WorkFromHomeRequestController;
 use App\Support\HolidayCalendar;
 use App\Support\ManualAttendanceCategories;
@@ -212,6 +214,15 @@ Route::middleware('auth')->group(function () {
         Route::post('employee-groups', [EmployeeGroupController::class, 'store'])->name('employee-groups.store');
         Route::get('employee-groups/{employeeGroup}/edit', [EmployeeGroupController::class, 'edit'])->name('employee-groups.edit');
         Route::put('employee-groups/{employeeGroup}', [EmployeeGroupController::class, 'update'])->name('employee-groups.update');
+        Route::get('meeting-rooms/manage', [MeetingRoomController::class, 'index'])->name('meeting-rooms.manage');
+        Route::get('meeting-rooms/manage/create', [MeetingRoomController::class, 'create'])->name('meeting-rooms.create');
+        Route::post('meeting-rooms/manage', [MeetingRoomController::class, 'store'])->name('meeting-rooms.store');
+        Route::get('meeting-rooms/manage/{meetingRoom}/edit', [MeetingRoomController::class, 'edit'])
+            ->whereNumber('meetingRoom')
+            ->name('meeting-rooms.edit');
+        Route::put('meeting-rooms/manage/{meetingRoom}', [MeetingRoomController::class, 'update'])
+            ->whereNumber('meetingRoom')
+            ->name('meeting-rooms.update');
         Route::get('wfh-requests/create', [WorkFromHomeRequestController::class, 'create'])->name('wfh-requests.create');
         Route::post('wfh-requests', [WorkFromHomeRequestController::class, 'store'])->name('wfh-requests.store');
     });
@@ -236,6 +247,14 @@ Route::middleware('auth')->group(function () {
         Route::get('manual-attendance/create', [ManualAttendanceController::class, 'create'])->name('manual-attendance.create');
         Route::post('manual-attendance', [ManualAttendanceController::class, 'store'])->name('manual-attendance.store');
     });
+});
+
+Route::middleware(['auth', 'role:employee,supervisor,admin,superadmin'])->group(function () {
+    Route::get('meeting-rooms', [MeetingRoomBookingController::class, 'index'])->name('meeting-rooms.index');
+    Route::post('meeting-room-bookings', [MeetingRoomBookingController::class, 'store'])->name('meeting-room-bookings.store');
+    Route::post('meeting-room-bookings/{booking}/cancel', [MeetingRoomBookingController::class, 'cancel'])
+        ->whereNumber('booking')
+        ->name('meeting-room-bookings.cancel');
 });
 
 Route::middleware(['auth', 'role:employee,supervisor'])->group(function () {

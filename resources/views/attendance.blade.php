@@ -85,6 +85,7 @@
                 @if ($isOwnAttendance)
                     <a class="button button-secondary" href="{{ route('employee.leaves.index') }}">My Leaves</a>
                     <a class="button button-secondary" href="{{ route('employee.wfh.index') }}">My WFH Requests</a>
+                    <a class="button button-secondary" href="{{ route('meeting-rooms.index') }}">Meeting Rooms</a>
                     @if (auth()->user()->role?->slug === 'supervisor')
                         <a class="button button-secondary" href="{{ route('employee.groups') }}">My Groups</a>
                         <a class="button button-secondary" href="{{ route('employee.attendance.team') }}">Team Attendance</a>

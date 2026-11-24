@@ -7,6 +7,10 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Meeting room reservations
+
+Employees, supervisors, and administrators can open **Meeting Rooms** from the dashboard to view the day/hour, week, or month calendar and book an active room. A booking is confirmed immediately when the room is available; overlapping reservations for the same room are rejected. Users can cancel their own upcoming bookings. Superadmins can add rooms and deactivate rooms from **Manage Meeting Rooms**.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

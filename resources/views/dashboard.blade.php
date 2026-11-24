@@ -203,8 +203,10 @@
         </div>
         <p>
             <a class="button button-secondary" href="{{ route('wfh-requests.index') }}">WFH Requests</a>
+            <a class="button button-secondary" href="{{ route('meeting-rooms.index') }}">Meeting Rooms</a>
             @if (auth()->user()->role?->slug === 'superadmin')
                 <a class="button button-secondary" href="{{ route('employee-groups.index') }}">Employee Groups</a>
+                <a class="button button-secondary" href="{{ route('meeting-rooms.manage') }}">Manage Meeting Rooms</a>
             @endif
         </p>
 
