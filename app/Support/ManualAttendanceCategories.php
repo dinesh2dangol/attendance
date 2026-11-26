@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class ManualAttendanceCategories
 {
-    public const REASONS = ['WFH', 'Forgot', 'Others'];
+    public const REASONS = ['WFH', 'Forgot', 'Others', 'Finger Not Recognized'];
 
     public static function byDate(string $userId, Carbon $start, Carbon $end): Collection
     {
