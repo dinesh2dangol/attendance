@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # The Laravel Application Service (PHP-FPM & CLI)
   app:
